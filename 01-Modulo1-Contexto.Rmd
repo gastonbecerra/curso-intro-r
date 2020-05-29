@@ -1,6 +1,4 @@
-# Modulo 1
-
-## Contexto
+# Introducción a R
 
 ### Definiciones, retórica y mitos del big data y la ciencia de datos
 
@@ -13,13 +11,4 @@ xxx
 ### El big data como objeto de estudio para las ciencias sociales y humanas
 
 xxx
-
-## Programación en R
-
-Metodología de trabajo; uso de RStudio; reportes con Markdown;
-colaboración con github
-
-## Análisis de datos
-
-Análisis exploratorio de datos
 
