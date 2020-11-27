@@ -3,7 +3,8 @@ title: "Curso de R"
 author: "Campeon 1 y 2"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
-output: bookdown::gitbook
+output: 
+  bookdown::gitbook
 documentclass: book
 bibliography: [book.bib, packages.bib]
 biblio-style: apalike
@@ -12,5 +13,29 @@ github-repo: rstudio/bookdown-demo
 description: "Curso de R"
 ---
 
-# Introducción
+# Introducción {-}
 
+## Acerca de este libro {-}
+
+**Objetivo.** Este libro se preparó como material complementario de una asignatura que tiene por objetivo introducir a estudiantes de sociología y psicología, y otras disciplinas de las ciencias sociales y las humanidades, a un análisis del big data como un fenómeno tecnológico, social y cultural, con una visión ética, epistemológica y crítica. Específicamente, aquí buscamos introducirnos a la programación y el análisis de datos por medio del lenguaje R. Si bien este objetivo es explícitamente del nivel introductorio, creemos que puede ser un primer paso hacia un fin necesario: acercarnos al fenómeno del big data, con una mirada *desde adentro*.
+
+**Justificación.** Escenarios sociales y técnicos como el big data, así como los avances en inteligencia artificial y la proliferación de algoritmos en diversas esferas de la vida social, o el advenimiento de las así llamadas "ciencias de datos", entre otros fenómenos, están transformando la realidad social. Los y las científicas sociales en general, y los y las sociólogas y psicólogas en particular, no podemos ser ajenos a estas transformaciones. Debemos involucrarnos y trabajar junto a ingenieros, programadores, estadísticos, y otros profesionales, para que la mirada crítica y reflexiva que hemos desarrollado pueda ser incorporada. Y también para repensar y reevaluar nuestra propias maneras de hacer ciencia, y así actualizar y revitalizar aquello que hace únicas a las disciplinas sociales y humanísticas [^1]. 
+
+[^1]: Basta recordar los interesantes desarrollos y debates que se originaron en sociología y psicología a partir del diálogo con otras disciplinas, como fueron los desarrollos vinculados a la complejidad y la cibernética en las décadas del ’70-90.
+
+**Nota sobre los contenidos.** Los capítulos de este libro recogen las unidades prácticas que se dictan en el curso. Todos los casos de análisis remiten a diversas formas de problematizar -con distintas fuentes y con distintas técnicas- la misma pregunta: *¿qué significa el big data para la sociedad y los grupos sociales?* [^2] . Ciertamente esto introduce varias limitaciones para los casos de análisis, especialmente porque esta pregunta rectora se encuentra en un nivel descriptivo. Sin embargo, también nos permitirá explicitar y discutir -al menos brevemente- de qué manera las técnicas pueden ser relevantes -y en ocasiones, familiares- a preguntas de investigaciones sociales. Además de estas breves notas teóricas, y los casos prácticos comentados, se incluyen algunas referencias para seguir explorando.
+Otros recursos y materiales del curso, más vinculados a los enfoques críticos y epistemológicos, se pueden encontrar [en otro repositorio](https://github.com/gastonbecerra/curso-bigdata-ciencias-sociales).
+
+[^2]: La pregunta responde a un programa de investigación delineado en @Becerra2018.
+
+## Otros recursos {-}
+
+Recomendamos (¡y mucho!) los siguientes recursos introductorios a la ciencia de datos y la programación en R, de licencia abierta, en castellano, y mayormente pensados para estudiantes de ciencias sociales:
+
+- [Ciencia de Datos para Gente Sociable
+](https://bitsandbricks.github.io/ciencia_de_datos_gente_sociable/) de Antonio Vazquez Brust (¡Excelente!)
+- [AnalizaR Datos Políticos](https://arcruz0.github.io/libroadp/index.html) de Francisco Urdinez y Andrés Cruz Labrín (Editores)
+- [RStudio para Estadística Descriptiva en Ciencias Sociales
+](https://bookdown.org/gboccardo/manual-ED-UCH/) de Giorgio Boccardo Bosoni y Felipe Ruiz Bruzzone
+
+Además, te invitamos a que busques las comunidades de usuarios y usuarias de R mas cercanos a vos en el siguiente [mapa de Meetup](https://www.meetup.com/es/pro/r-user-groups/).
