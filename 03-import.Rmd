@@ -1,9 +1,0 @@
-# Importar datos
-
-## Fuentes de datos
-
-## Leer datasets
-
-## API
-
-## Scraping

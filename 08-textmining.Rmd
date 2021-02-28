@@ -1,9 +1,0 @@
-# Textmining
-
-## Frecuencies
-
-## Topic modelling
-
-## Lexicon-based
-
-## Sentiment analylsis

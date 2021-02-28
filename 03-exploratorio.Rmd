@@ -1,0 +1,72 @@
+# Análisis exploratorio, limpieza y transformación de datos
+
+La pregunta que guía este capítulo es: **¿con qué ideas asocian al big data los estudiantes argentinos de distintas carreras?**
+
+Para responderla, vamos a ver cómo:
+
+1. Realizar un primer análisis exploratorio para familiarizarnos con los datos y su estructura;
+2. Manipular y transformar los datos, cruzando tablas;
+3. Hacer nuestros primeros gráficos.
+
+## Análisis exploratorio
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(readr)
+
+terminos_todos <- read_csv("E:/r/bigdata-rrss/data/terminos_todos.csv")
+estimulos_todos <- read_csv("E:/r/bigdata-rrss/data/estimulos_todos.csv")
+
+terminos_todos <- terminos_todos %>% inner_join(estimulos_todos, by="id")
+
+asociaciones <- terminos_todos %>% filter(
+  estimulo == "Big data"
+) %>% select(-tiempo,-estimulo)
+
+rm(estimulos_todos, terminos_todos)
+
+```
+
+El objetivo de un análisis exploratorio es familiarizarnos con la estructura de los datos.
+
+Vamos a trabajar con el dataset de asociaciones libres a la palabra "Big data". 
+
+Lo primero que vamos a hacer es *chusmear* (`glimpse`) la estructura de la base. Esto nos va a permitir saber:
+
+* la cantidad de registros y columnas
+* los nombres de las columnas y su tipo de dato (las columnas aparecen listadas en forma vertical con un $)
+* los primeros registros (que quepan en pantalla)
+
+```{r}
+
+glimpse(asociaciones)
+
+```
+Por lo que podemos ver, tenemos 4 columas: `id` y `palabra` son variables de texto (`<chr>`), mientras `orden` y `valoracion` son numéricas. Otro posible tipo de columna es `factor` (`<fct>`) que sirve para registrar categorías, donde cada valor posible es un `level`.
+
+Debemos notar es que el valor de `id` se repite entre filas, lo que nos da la pauta que varios registros corresponden naturalmente juntos. En este caso, se tratan de las distintas palabras mencionadas por un mismo participante frente a "big data". Cada palabra propuesta tiene, además, el orden de evocación (`orden`), generalmente entre 1 y 5 aunque el participante podía agregar más palabras, y la valoración dada, entre 0 y 10 (`valoracion`).
+
+Luego, es útil tener una idea de los valores posibles de las distintas columnas o variables. `summary` nos devuelve un resumen de estadísticas descriptivas. 
+
+```{r}
+
+summary(asociaciones)
+
+```
+
+Otras tareas que nos pueden interesar en el análisis exploratorios son:
+
+* ver la cantidad de datos vacíos
+* ver la cantidad de datos redundantes
+* ver relaciones entre variables
+* graficar el rango de valores de una o más variables
+
+Muchas de estas tareas se pueden hacer con [distintos packages](https://www.groundai.com/project/the-landscape-of-r-packages-for-automated-exploratory-data-analysis/1).
+
+Recordá que podes ver la tabla, como si estuvieras viendo una planilla, con `view(asociaciones)`.
+
+## Transformación de datos
+
+
+
