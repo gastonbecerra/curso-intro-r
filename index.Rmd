@@ -78,3 +78,4 @@ Recomendamos (¡y mucho!) los siguientes recursos introductorios a la ciencia de
 ](https://bookdown.org/gboccardo/manual-ED-UCH/) de Giorgio Boccardo Bosoni y Felipe Ruiz Bruzzone
 
 Además, te invitamos a que busques las comunidades de usuarios y usuarias de R mas cercanos a vos en el siguiente [mapa de Meetup](https://www.meetup.com/es/pro/r-user-groups/).
+  
