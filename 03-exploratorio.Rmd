@@ -5,8 +5,7 @@ En este capítulo vamos a intentar responder **qué es el big data para la socio
 Para responderla deberemos:
 
 1. explorar y familiarizarnos con los datos y su estructura;
-2. transformar los datos para que darle la mejor estructura para nuestros análisis;
-3. procesar y relacionar datos;
+2. transformar los datos para que darle la estructura óptima para nuestros análisis;
 3. hacer nuestros primeros gráficos.
 
 ## Cargar datos y recursos
@@ -24,16 +23,10 @@ Luego importaremos los datos con la función `read_csv()` de la librería `readr
 
 #2do: limpiar las tablas y dejar un csv
 
-library(readr) 
+library(readr) # vamos a cargar las librerias
 library(tidyverse) 
 
-estimulos_todos <- read_csv("E:/r/bigdata-rrss/data/estimulos_todos.csv")
-terminos_todos <- read_csv("E:/r/bigdata-rrss/data/terminos_todos.csv")
-terminos_todos <- terminos_todos %>% inner_join(estimulos_todos, by="id")
-asociaciones <- terminos_todos %>% filter(
-  estimulo == "Big data"
-) %>% select(-tiempo,-estimulo)
-rm(estimulos_todos, terminos_todos)
+articulos <- readr::read_csv(file = "https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/biblio.csv")
 
 ```
 

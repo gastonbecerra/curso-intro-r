@@ -1,6 +1,8 @@
 library(readr)
 library(tidyverse)
 
+# asociaciones --------------------------------
+
 estimulos_todos <- read_csv("E:/r/bigdata-rrss/data/estimulos_todos.csv")
 terminos_todos <- read_csv("E:/r/bigdata-rrss/data/terminos_todos.csv")
 terminos_todos <- terminos_todos %>% inner_join(estimulos_todos, by="id")
@@ -37,3 +39,16 @@ terminos2 <- terminos %>%
   select(id,palabra,orden,valoracion)
 
 terminos2 %>% write.csv(file = "data/asociaciones.csv")
+
+
+# biblio --------------------------------
+
+
+articulos <- readr::read_csv(file = "./data/biblio.csv") %>%
+  select(
+    autores = Authors,
+    titulo = Title,
+    anio = year,
+    claves = `Author Keywords`,
+
+  )
