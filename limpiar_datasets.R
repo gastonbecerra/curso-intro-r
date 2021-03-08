@@ -36,9 +36,11 @@ terminos <- terminos %>% left_join( lemmas, by = "id_orden" )
 glimpse(terminos)
 
 terminos2 <- terminos %>%
-  select(id,palabra,orden,valoracion)
+  select(id,palabra,orden,valoracion) %>%
+  mutate(valoracion=valoracion-5)
 
-terminos2 %>% write.csv(file = "data/asociaciones.csv")
+
+terminos2 %>% write.csv(file = "data/asociaciones.csv", row.names = FALSE, fileEncoding = "utf-8")
 
 
 # biblio --------------------------------

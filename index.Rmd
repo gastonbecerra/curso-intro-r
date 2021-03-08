@@ -1,6 +1,7 @@
 --- 
-title: "Curso de R"
-author: "Campeon 1 y 2"
+title: "Introducción a la ciencia de datos con R."
+subtitle: "Una exploración guiada por la pregunta: *¿qué es el big data?*"
+author: "Gastón Becerra y Juan Pablo López Alurralde"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
 output: 
@@ -21,15 +22,13 @@ Estos recursos corresponden a un curso que busca introducir a estudiantes de soc
 
 Específicamente, aquí buscamos introducirnos al análisis de datos por medio del lenguaje R. Si bien este objetivo es explícitamente de nivel introductorio, creemos que puede ser un primer paso hacia un fin necesario: acercarnos al fenómeno de los datos, con una mirada *desde adentro*.
 
-## Enfoque {-}
-
 Escenarios sociales y técnicos como el big data, así como los avances en inteligencia artificial y la proliferación de algoritmos en diversas esferas de la vida social, o el advenimiento de las así llamadas "ciencias de datos", entre otros fenómenos, están transformando la realidad social. 
 
 Los y las científicas sociales en general -especialmente los y las psicólogos/as y sociológos/as- no podemos ser ajenos a estas transformaciones. Debemos involucrarnos y trabajar junto a ingenieros, programadores, estadísticos, y otros profesionales, para que la mirada crítica y reflexiva que hemos desarrollado en nuestra formación profesional pueda ser incorporada. Y también para repensar y reevaluar nuestra propias maneras de hacer ciencia, y así actualizar y revitalizar aquello que hace únicas a las disciplinas sociales y humanísticas[^1]. 
 
 [^1]: Basta recordar los interesantes desarrollos y debates que se originaron en sociología y psicología a partir del diálogo con otras disciplinas, como fueron los desarrollos vinculados a la complejidad y la cibernética en las décadas del ’70-90.
 
-## Contenidos {-}
+## Contenidos / Preguntas {-}
 
 Los casos prácticos remiten a diversas formas de problematizar -con distintas fuentes y con distintas técnicas- la misma pregunta: *¿qué significa el big data para la sociedad?*[^2]. Ciertamente esto introduce varias limitaciones para las técncias de análisis que aquí se muestran, especialmente porque esta pregunta rectora se encuentra en un nivel descriptivo.
 
@@ -37,55 +36,25 @@ La razón por la que nos imponemos semejante condición es la siguiente: en luga
 
 [^2]: La pregunta responde a un programa de investigación delineado en @Becerra2018.
 
-### I. ¿Qué es el big data para la sociología? {-}
+### I. ¿Cuál es el sentido común del big data? {-}
 
-Para responder esta pregunta, vamos a explorar un dataset de artículos en castellano sobre big data, con una mirada *bibliométrica*.
+Para responder esta pregunta, vamos a indagar los sentidos que se evocan al pensar en big data, siguiendo el *enfoque estructural de las representaciones sociales* de @Abric2001. Para ello trabajaremos con datos de una encuesta que incluía la técnica de asociación de palabras.
+En este tutorial nos introducimos al **análisis exploratorio, manipulación de datos y la construcción de gráficos**, y a la **construcción de nuestras propias funciones**.
 
-En este tutorial nos introducimos al **análisis exploratorio, manipulación de datos y la construcción de gráficos**.
-
-### II. ¿Cuál es el sentido común sobre el big data? {-}
-
-Para responder esta pregunta, vamos a indagar los sentidos que se evocan al pensar en big data, siguiendo el *enfoque estructural de las representaciones sociales*. Para ello trabajaremos con datos de una encuesta que incluía la técnica de asociación de palabras.
-
-En este tutorial aprenderemos a **construir nuestras propias funciones**.
-
-### III. ¿Cuál es la valoración sobre big data? (parte I) {-}
+### II. ¿Cuál es la valoración sobre big data? (parte I) {-}
 
 Para responder a esta pregunta nos introduciremos en lo básico del *procesamiento del lenguaje natural*. 
-
 Particularmente, en este tutorial aprenderemos a **preprocesar texto y hacer un análisis de sentimiento (con lexicones)**.
 
-### IV. ¿Cómo se tematiza al big data? {-}
+### III ¿Cómo se tematiza al big data? {-}
 
 Para responder esta pregunta exploraremos un corpus de noticias sobre big data, buscando identificar distintas formas de tematizarlo o enmarcarlo discursivamente (*frames*).
-
 En este tutorial aprenderemos una técnica de entrenamiento no supervisado, denominada **topic modeling**, y veremos cómo analizar estos resultados (cuantitativos) en conjunto con nuestras interpretaciones (cualitativas).
 
-### V. ¿Cuál es la valoración sobre big data? (parte II) {-}
+### IV. ¿Cuál es la valoración sobre big data? (parte II) {-}
 
 Finalmente, continuaremos con el problema de la valoración o polaridad del big data, trabajando ahora con un breve corpus de oraciones que lo mencionan, clasificadas en positivas/negativas.
-
 En este tutorial aprenderemos a una técnica de entrenamiento supervisado, tendiente a **clasificar textos**.
-
-## Requisitos {-}
-
-### Instalación de Lenguaje R  {-}
-
-R es un lenguaje de programación pensado para computación estadística, que se distribuye de forma libre y gratuita bajo licencia GNU, y que corre en distintas plataformas y sistemas operativos. 
-
-Para correr R es necesario instalar el **entorno que ejecuta el lenguaje**. 
-Para ello tenés que descargar la última versión desde alguna copia regional (o *mirror*) del [CRAN: El archivo oficial de R](https://cran.r-project.org/mirrors.html) como, por ejemplo, la que aloja la [Universidad Nacional de La Plata](http://mirror.fcaglp.unlp.edu.ar/CRAN/), en Argentina.
-
-```{block, type='rmdcomment'}
-¿No estás acostumbrado a instalar programas y preferís ver el proceso antes de meter mano? [Video: Cómo Descargar e Instalar R y RStudio - 2020](https://www.youtube.com/watch?v=D9Bp11iZssc)
-```
-
-
-### Instalación de Interface RStudio  {-}
-
-Una vez que hayas descargado e instalado R, ya estarías en condiciones de introducir comandos en lenguaje R a través de la *consola*. No obstante, esto es muy rudimentario. 
-Para trabajar generalmente se utiliza un programa adicional, un entorno gráfico (o *IDE*) que facilita varias cosas, como la edición de código con coloreado y ayuda para autocompletado, organizar fácilmente los archivos, visualizar objetos en memoria, recurrir a la ayuda, etc. El entorno más usado es [RStudio, cuya versión de escritorio se puede descargar gratuitamente](https://rstudio.com/products/rstudio/download/#download). 
-Otra opción es usar el popular [Visual Studio Code con un plugin](https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r).
 
 ## Otros recursos {-}
 
@@ -96,7 +65,6 @@ Recomendamos (¡y mucho!) los siguientes recursos introductorios a la ciencia de
 - [AnalizaR Datos Políticos](https://arcruz0.github.io/libroadp/index.html) de Francisco Urdinez y Andrés Cruz Labrín (Editores)
 - [RStudio para Estadística Descriptiva en Ciencias Sociales
 ](https://bookdown.org/gboccardo/manual-ED-UCH/) de Giorgio Boccardo Bosoni y Felipe Ruiz Bruzzone
-- [R for Data Science (Español)](https://es.r4ds.hadley.nz/) Versión español de “R for Data Science” de Hadley Wickham y Garrett Grolemund.
+- [R for Data Science (Español)](https://es.r4ds.hadley.nz/) Versión español del libro de Hadley Wickham y Garrett Grolemund.
 
 Además, te invitamos a que busques las comunidades de usuarios y usuarias de R mas cercanos a vos en el siguiente [mapa de Meetup](https://www.meetup.com/es/pro/r-user-groups/).
-  
