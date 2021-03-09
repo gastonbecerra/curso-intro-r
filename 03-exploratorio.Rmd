@@ -169,7 +169,7 @@ asoc_frecuentes %>% # Paso1
   geom_point()
 ```
 
-Por lo visto, tenemos una distribución tipo "long tail": muy poca cantidad de palabras tienen valores que se repiten muchas veces (los sentidos más comúnes), y hay casi 700 palabras que se repiten 1 sola vez. En vistas de esto podemos quedarnos con las palabras que se repiten más de 1 vez, criterio que utilizaremos para establecer un filtro (`filter()`). En esta ocasión, por simpleza, vamos a "pisar" nuestra tabla de datos con un fragmento de ella misma.
+Por lo visto, tenemos una distribución que sigue la [ley de Zipf](https://es.wikipedia.org/wiki/Ley_de_Zipf): muy poca cantidad de palabras tienen valores que se repiten muchas veces (los sentidos más comúnes), y hay casi 700 palabras que se repiten 1 sola vez. En vistas de esto podemos quedarnos con las palabras que se repiten más de 1 vez, criterio que utilizaremos para establecer un filtro (`filter()`). En esta ocasión, por simpleza, vamos a "pisar" nuestra tabla de datos con un fragmento de ella misma.
 
 ```{r message=TRUE, warning=FALSE}
 asoc_frecuentes <- asoc_frecuentes %>% # vamos a pisar la tabla con el resultado
@@ -198,6 +198,162 @@ asoc_frecuentes %>%
 ```
 
 ## Funciones
+
+En este apartados vamos a juntar estas operaciones de modo tal que nos permita realizar un *análiasis prototípico*, siguiendo el modelo estructural de @Abric2001 para la *teoría de la representación social*. Esta teoría supone que las representaciones se compone, por un lado, de un núcleo central que aúna los sentidos más comunes y estables de la representación, y por el otro, de elementos periféricos que concretizan la representación y la vinculan a los distintos contextos específicos de su uso. 
+
+Este análisis consiste en calcular, por cada término indagado, la frecuencia y rango de evocación de las respuestas, para luego dividirlo en 4 segmentos que pueden ser interpretados como el núcleo de la representación, sus elementos periféricos y dinámicos, y sus manifestaciones singulares e idiosincráticas. 
+
+Una decisión importante para este análisis es el criterio para establecer los cortes entre segmentos (mas y menos frecuencias / más y menos evocados rápidamente), aspecto que no tiene consensos en la literatura [@Dany2014, @Wachelke2011]: algunos usan la media, otros la mediana, y otros alguna función pensada para una distribución como la de ley de Zipf. Otra decisión importante es la de utilizar algún umbral o mínimo de frecuencia para achicar el corpus. 
+
+Aquí vamos "empaquetarlas" las operaciones necesarias para el análisis en una función, con una serie de parámetros (inputs) y un valor de salida (output). Esto nos va a permitir fácilmente probar distintos parametros para las decisiones que debemos tomar, sin tener que volver a escribir el código de las operaciones.
+
+Para crear una funcion vamos a utilizar `function()` incluyendo los parametros que esperamos entre los paréntesis. Vamos a guardar la función en un objeto (y así le vamos a dar un nombre que podamos invocar después) con `<-`.
+
+```{r}
+analisis_proto <- function (tabla_evocaciones) {
+  
+  # las operaciones van aca...
+  # por ahora no vamos a hacer nada mas que asignar nuestro input a un nuevo objeto...
+  objeto_a_devolver <- tabla_evocaciones 
+  
+  return(objeto_a_devolver) # ... y lo devolvemos
+}
+```
+
+Podemos llamar a la función con `analisis_proto(asociaciones)` pero, con la definición que hicimos, no nos debe sorprender que la función no haga más que llamar el objeto. 
+
+```{r}
+analisis_proto(asociaciones) %>% glimpse()
+```
+
+No obstante, esto nos permite observar una cosa, si prestamos atención al entorno: el `objeto_a_devolver` no aparece en nuestra lista de objetos porque quedó "encapsulado" en la función. Lo mismo puede decirse de `tabla_evocaciones`, que es la forma en que en la función llamamos a nuestro primer parámetro (los datos).
+
+Ahora sólo resta pensar en cuáles son los pasos a seguir para realizar el análisis. Nuestros pasos 1 y 2 repiten las operaciones que hicimos más arriba:
+
+(paso 1) vamos a generar una tabla de frecuencias por palabras, calculando las medias de valoración y orden de evocación;
+(paso 2) vamos a cortar la tabla, descartando aquellas palabras que no lleguen a una frecuencia mínima (este es un parámetro que vamos a agregar a los paréntesis de la función);
+
+Luego, vamos a agregar:
+
+(paso 3) vamos a calcular los criterios de corte para distinguir los mas/menos frecuentes y los evocados mas/menos rápidamente;
+(paso 4) vamos a utilizar estos criterios de corte para segmentar las asociaciones;
+(paso 5) vamos a devolver el resultado.
+
+```{r}
+analisis_proto <- function (tabla_evocaciones, frecuencia_minima = 2) {
+  
+  # parametros:
+  # tabla_evocaciones = la tabla de evocaciones con las columnas palabra, valoracion, orden
+  # frecuencia_minima = un numero que representa la repetición mínima de palabras (aca podemos agregar un valor por defecto)
+  # ...
+  
+  # (paso 1) tabla de frecuencias
+  asoc_frecuentes <- asociaciones %>% 
+    group_by(palabra) %>% 
+    summarize( 
+      freq = n(), 
+      valoracion_media = mean(valoracion), 
+      orden_media = mean(orden) 
+    )  
+  
+  # (paso 2) establecemos un umbral de frecuencia minima
+  
+  asoc_frecuentes <- asoc_frecuentes %>% 
+    filter(freq > frecuencia_minima) 
+  
+  return(asoc_frecuentes) # ... y lo devolvemos
+}
+```
+
+Probemos hasta aquí, y veamos el objeto que nos devuelve:
+
+```{r}
+analisis_proto(asociaciones) %>% glimpse()
+```
+
+
+
+```{r eval=FALSE, include=FALSE}
+
+crear_evok <- function( tabla, palabra, orden, valoracion, frecuencia_minima = 2) {
+  
+  # tabla, palabra y orden son la base
+  # otros, como valoracion, deberian venir con una funcion de agregación, mean por default
+  # cortes hay que darlos por funcion o por numero: mean, median, threshold
+  # frecuencia_minima?
+  # freq-dist se tiene que poder obviar
+  
+  stopifnot(is.data.frame(tabla))
+  stopifnot(is.numeric(frecuencia_minima))
+  
+  palabra_column = enquo(arg = palabra)
+  orden_column = enquo(arg = orden)
+  valor_column = enquo(arg = valoracion)
+  
+  # frequency x rank table 
+  
+  freq_x_rank <- tabla %>% 
+    group_by(!!palabra_column) %>% summarise(
+      freq=n(), # frecuencia
+      rank=mean(!!orden_column), # media de orden de evocacion
+      assessm=mean(!!valor_column),  # media de valoracion
+      .groups = 'drop_last'
+      ) 
+  
+  # le calculamos una frecuencia minima
+  # otra opcion es hacer los calculos sobre el corpus no cortado
+  
+  freq_x_rank <- freq_x_rank %>%
+    group_by(!!palabra_column) %>%
+    filter( freq >= frecuencia_minima)
+  
+  # modo prototypical de iramuteq
+  # x <- freq_x_rank %>% 
+  #   column_to_rownames(var = "palabra") %>%
+  #   select(freq,rank) 
+  # mfreq <- sum(x[,1]) / nrow(x)
+  # mrank <- sum(x[,1] * x[,2]) / sum(x[,1])
+  # print(mfreq)
+  # print(mrank)
+  
+  # 2do: permitir meter las operaciones (o los valores) como args
+  
+  freq_cut <- mean(freq_x_rank$freq) # cut-off media de frecuencias de evocacion
+  rank_cut <- mean(freq_x_rank$rank) # cut-off between high and low rank = a mean split was used (De Rosa, 2003)
+  
+  # rank cut esta dando != que iramuteq
+  
+  message("frequency cut = ", freq_cut)
+  message("rank cut = ", rank_cut)
+
+  freq_x_rank <- freq_x_rank %>% mutate( q = case_when(
+    freq >= freq_cut & rank < rank_cut ~ 1,
+    freq >= freq_cut & rank >= rank_cut ~ 2,
+    freq < freq_cut & rank < rank_cut ~ 3,
+    freq < freq_cut & rank >= rank_cut ~ 4 # teoricamente, no tiene sentido distinguir el 3 del 4
+  )
+  ) %>% arrange(q,desc(freq,rank))
+
+  return(
+    list(
+      data = freq_x_rank ,
+      parameters = list(
+      "freq_cut" = freq_cut ,
+      "rank_cut" = rank_cut ,
+      "min_cut" = frecuencia_minima ,
+      "dix_length" = nrow(freq_x_rank) ,
+      "q1_length" = sum(freq_x_rank$q == 1) ,
+      "q2_length" = sum(freq_x_rank$q == 2) ,
+      "q3_length" = sum(freq_x_rank$q == 3) ,
+      "q4_length" = sum(freq_x_rank$q == 4) 
+      )
+    )
+  )
+}
+
+```
+
+
 
 ## Yapa
 
