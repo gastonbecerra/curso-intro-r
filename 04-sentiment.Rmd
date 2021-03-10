@@ -1,0 +1,23 @@
+# ¿Cuál es la valoración acerca del big data?
+
+En este capítulo vamos a intentar explorar **¿Cuál es la valoración sobre big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data". 
+
+Como estaremos trabajando con texto En este caso vamos a introducirnos a los fundamentos del procesamiento del lenguaje natural, particularmente  a través de la técnica de *sentiment analysis*, que buscaremos implementar de dos maneras: en primer lugar, un caso "mínimo", asignando valoraciones a palabras y haciendo nosotros alguna evaluación; en segundo lugar, a través de una librería que contemple las falencias de nuestro enfoque "mínimo".
+
+A lo largo de este ejercicio veremos:
+
+1. cómo pre-procesar texto para su posterior análisis;
+2. cómo cruzar tablas;
+3. cómo buscar e instalar librerías específicas y preparar los datos para su utilización.
+
+## Pre-procesamiento de texto
+
+xxx
+
+## Cruzar tablas
+
+xxx
+
+## Preparamos para SentimentR
+
+xxx
