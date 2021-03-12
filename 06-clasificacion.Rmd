@@ -1,0 +1,15 @@
+# ¿Cuál es la valoración acerca del big data?
+
+En este capítulo vamos a intentar explorar **¿Cuál es la valoración sobre big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data", y que fueron anotados a mano, clasificando entre sentidos positivos y negativos.
+
+## Pre-procesamiento de texto
+
+xxx
+
+## Cruzar tablas
+
+xxx
+
+## Preparamos para SentimentR
+
+xxx
