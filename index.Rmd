@@ -1,6 +1,6 @@
 --- 
 title: "Introducción a la ciencia de datos con R."
-subtitle: "Una exploración guiada por la pregunta: *¿qué es el big data?*"
+subtitle: "Una guía rápida para cientistas sociales."
 author: "Gastón Becerra y Juan Pablo López Alurralde"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
@@ -28,33 +28,29 @@ Los y las científicas sociales en general -especialmente los y las psicólogos/
 
 [^1]: Basta recordar los interesantes desarrollos y debates que se originaron en sociología y psicología a partir del diálogo con otras disciplinas, como fueron los desarrollos vinculados a la complejidad y la cibernética en las décadas del ’70-90.
 
-## Contenidos / Preguntas {-}
+## Contenidos {-}
 
-Los casos prácticos remiten a diversas formas de problematizar -con distintas fuentes y con distintas técnicas- la misma pregunta: *¿qué significa el big data para la sociedad?*[^2]. Ciertamente esto introduce varias limitaciones para las técncias de análisis que aquí se muestran, especialmente porque esta pregunta rectora se encuentra en un nivel descriptivo.
+Los casos prácticos remiten a diversas preguntas acerca del big data. Los datasets y algunos análisis se basan en fragmentos de nuestras investigaciones sobre el sentido social de este fenómeno[^2]. Hemos optado por esta referencia a nuestros propios trabajos para ejemplificar de qué manera estos análisis -si bien simplificados para facilitar su uso pedagógico- se utilizan en investigaciones sociales guiada por la teoría y en el marco de una pregunta sociológica o psicosocial que condiciona su interpretación, sus decisiones y sus desafíos. Además, nos permite *abrir la cocina de la investigación* para así discutir nuestras decisiones metodológicas. 
 
-La razón por la que nos imponemos semejante condición es la siguiente: en lugar de presentar una serie de técnicas *en abstracto*, nos interesa llegar a las técnicas desde una pregunta de investigación teóricamente fundada con la mirada de las ciencias sociales y la psicología. Esto nos permitirá explicitar y discutir nuestros propios diseños de investigación y pensar la relevancia que revisten estas nuevas herramientas.
+[^2]: Este programa de investigación se encuentra delineado en @Becerra2018 y @Becerra2018a.
 
-[^2]: La pregunta responde a un programa de investigación delineado en @Becerra2018.
+### Tutorial #1. Explorar, manipular y visualizar datos {-}
 
-### I. ¿Cuál es el sentido común del big data? {-}
+En este tutorial aprenderemos **análisis exploratorio, manipulación de datos y la construcción de gráficos**, para luego **construir nuestras propias funciones**. 
 
-Para responder esta pregunta, vamos a indagar los sentidos que se evocan al pensar en big data, siguiendo el *enfoque estructural de las representaciones sociales* de @Abric2001. Para ello trabajaremos con datos de una encuesta que incluía la técnica de asociación de palabras.
-En este tutorial nos introducimos al **análisis exploratorio, manipulación de datos y la construcción de gráficos**, y a la **construcción de nuestras propias funciones**.
+Con estas tareas seremos capaces de responder a la pregunta por los sentidos que se evocan al pensar en big data, siguiendo el "análisis prototípico" del enfoque estructural de la Teoría de las representaciones sociales de @Abric2001. Aquí trabajaremos con un dataset construido a partir de una encuesta que incluía la técnica de asociación de palabras con respecto a "big data", entre otros términos (@Becerra2020).
 
-### II. ¿Cuál es la valoración sobre big data? (parte I) {-}
+### Tutorial #2. Preprocesar texto y cruzar tablas {-}
 
-Para responder a esta pregunta nos introduciremos en lo básico del *procesamiento del lenguaje natural*. 
-Particularmente, en este tutorial aprenderemos a **preprocesar texto y hacer un análisis de sentimiento (con lexicones)**.
+En este tutorial aprenderemos lo básico de **preprocesamiento de texto** para empezar a analizar el lenguaje natural, y a **cruzar tablas** para realizar un análisis de sentimientos con lexicones. Estas serán tareas útiles para tratar el problema de la polaridad que recubre al sentido social del big data, que oscila entre una “gran oportunidad” por su epistémica, y un "gran riesgo" por su explotación para el control y el condicionamiento de los grupos sociales.
 
-### III ¿Cómo se tematiza al big data? {-}
+### Tutorial #3. Entrenamiento no-supervisado: Modelamiento de tópicos {-}
 
-Para responder esta pregunta exploraremos un corpus de noticias sobre big data, buscando identificar distintas formas de tematizarlo o enmarcarlo discursivamente (*frames*).
-En este tutorial aprenderemos una técnica de entrenamiento no supervisado, denominada **topic modeling**, y veremos cómo analizar estos resultados (cuantitativos) en conjunto con nuestras interpretaciones (cualitativas).
+En este tutorial aprenderemos una técnica de entrenamiento no supervisado, denominada **topic modeling**, y veremos cómo analizar estos resultados (cuantitativos) en conjunto con nuestras interpretaciones (cualitativas). Esto nos permitirá discutir de qué manera ciertos patrones en el uso del lenguaje, sobre los que se construye un modelo, *podrían* ser indicativas de sentidos que exceden a la capacidad de cálculo de los algoritmos. 
 
-### IV. ¿Cuál es la valoración sobre big data? (parte II) {-}
+### Tutorial #4. Entrenamiento supervisado: Clasificación {-}
 
-Finalmente, continuaremos con el problema de la valoración o polaridad del big data, trabajando ahora con un breve corpus de oraciones que lo mencionan, clasificadas en positivas/negativas.
-En este tutorial aprenderemos a una técnica de entrenamiento supervisado, tendiente a **clasificar textos**.
+En este tutorial veremos cómo entrenar un modelo para clasificar oraciones acerca del big data en positivas / negativas, a partir de otras oraciones ya clasificadas por humanos. Esta tarea continúa lo visto en el tutorial #2.
 
 ## Otros recursos {-}
 

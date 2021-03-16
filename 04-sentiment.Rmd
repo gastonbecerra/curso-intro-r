@@ -1,4 +1,4 @@
-# ¿Cuál es la valoración acerca del big data?
+# Preprocesar texto y cruzar tablas
 
 En este capítulo vamos a intentar explorar **¿Cuál es la valoración acerca del big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data". 
 
@@ -12,7 +12,7 @@ Particularmente nos introduciremos en una rama particular del procesamiento del 
 
 Generalmente se acepta que hay 2 métodos para este tipo de análisis: 
 
-1, un enfoque basado en "lexicos" o "lexicones" (diccionarios que incluyen para cada palabra una valoración en alguna dimensión afectiva, como el agrado), y que consiste en calcular la valoración media del texto que nos interesa, a partir de pesar aquellas palabras que están en los lexicones;
+1. un enfoque basado en "lexicos" o "lexicones" (diccionarios que incluyen para cada palabra una valoración en alguna dimensión afectiva, como el agrado), y que consiste en calcular la valoración media del texto que nos interesa, a partir de pesar aquellas palabras que están en los lexicones;
 2. un enfoque basado en clasificación / aprendizaje automático, que busca inferir reglas para establecer la polaridad de una oración a partir de estudiar un dataset de oraciones previamente clasificadas (por un humano).[^1] 
 
 [^1]: Seguiremos este enfoque en un capítulo posterior.
@@ -55,121 +55,114 @@ install.packages("udpipe")
 modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia en un objeto modelo_sp$file_model
 ```
 
-Una vez instalado, vamos a cargar la librería y el modelo en memoria para poder usarlos.
+O si ya lo tenemos descargado, es conveniente referenciarlo:
 
-```{r}
-
+```{r, eval=T, echo=T}
 library(udpipe)
-#modelo_sp$file_model
-
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
 ```
 
+### Anotación del texto
 
+Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y anotar qué tipo de componente es cada palabra, además de lemmatizarlas.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r eval=F, echo=T}
 
-# tomamos el resultado de udpipe_annotate_oraciones.R (paso 1 del preprocesamiento) y lo transformamos
-
-oraciones_anotadas <- readr::read_csv("./data/oraciones_anotadas.csv") %>%
-  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") 
-
-evoc <- evoc %>% filter(lemma!="bigdata") %>% mutate(v=v/10) # esta bien convertirle el rango asi?
-
-# 2do: hay que ver la documentacion de SDAL para confirmar el rango y ver como maneja neutrales
-
-sdal <- sdal %>%
-  mutate(lemma = str_extract(pattern = "[^_]+", string = palabra)) %>% 
-  group_by(lemma) %>%
-  summarise(v=mean(as.numeric(agrado))) %>% 
-  mutate(v=v/3) # esta bien convertirle el rango asi?
+or_anotadas <- udpipe_annotate( 
+  object = modelo_sp, # el modelo de idioma
+  x = oraciones$oracion, # el texto a anotar, 
+  doc_id = oraciones$doc_id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 250
+  ) %>% as.data.frame(.) # convertimos el resultado en data frame
 
 ```
-
-
-
-
-
-
-## Cruzar tablas
-
-xxx
-
-## Preparamos para SentimentR
-
-xxx
-
-
 
 ```{r include=FALSE}
 
-evoc <- readr::read_csv("./data/lexicon2021.csv") %>%
-  filter(!is.na(lemma))
-# probablemente haya que modificarlo para usarlo dp
+# guardamos el parseado
+# glimpse(or_anotadas)
+# readr::write_csv(x = or_anotadas, file = "data/oraciones_anotadas.csv")
 
-sdal <- readxl::read_excel("./data/sdal.xlsx")
+# tomamos el parseado
+or_anotadas <- readr::read_csv(file = "data/oraciones_anotadas.csv")
 
 ```
 
-El sistema basado en reglas determina la orientación semántica de una oración a partir de un lexicón sentimental que contiene las polaridades a priori de las palabras.
-La principal ventaja de este tipo de sistemas es que no requiere anotar un corpus de entrenamiento. 
+Vamos a examinar la tabla con las oraciones parseadas:
 
-## Desafíos
+```{r}
+glimpse(or_anotadas)
+```
 
-El principal desafío de este tipo de sistemas es la dificultad de modelar el lenguaje natural de temas con alcances tan amplios, resultando en una gran dependencia de los lexicones. 
+Las siguientes variables nos interesan para preparar los datos para el análisis:
 
-Luego, existen diversos tipos de oraciones: 
-por un lado, hay oraciones simples donde se lo califica inambiguamente (e.g., "el permite es una gran herramienta para agregar valor a los servicios al cliente"), 
-mientras que por otro lado, puede aparecer sin mayor calificación (e.g., "La reunión tratará sobre big data e inteligencia artificial"), 
-o incluso como parte de una oración más amplia y compuesta (e.g., "'Se espera un crecimiento' dijo el experto en big data").
+* `doc_id`: dado que la tabla es "larga", y tiene 1 fila por cada palabra de cada oración, el doc_id nos permitirá volver a unir las piezas cuando hagamos tareas por oraciones;
+* `lemma`: incluye la forma lemmatizada de la palabra, sin género, en singular, y sin conjugación, y la vuelve minúscula (e.g., "es" se vuelve "ser", y "Datos" se conviernete en "dato");
+* `upos`: nos permite aclarar qué tipo de palabra es;
 
-2DO: hay que buscar ejemplos reales
+<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
 
-### Recursos necesarios
+### Filtramos palabras significativas
 
-Para llevar a cabo la tarea con este enfoque necesitamos:
+Aquí empiezan las decisiones que afectarán la calidad de los análisis, en relación al tipo de resultados que busquemos.
 
-**1. Corpus de oraciones:**
+Nuestra primera decisión es aprovechar la información de `upos` para quedaremos con las palabras que probablemente tengan mayor peso para conferir una orientación positiva o negativa: adjetivos, verbos, sustantivos y adverbios.
 
-Las oraciones se extrajeron de un corpus de 2.026 noticias publicadas en periódicos digitales argentinos que incluían explícitamente el término "big data" en su contenido. La construcción de ese corpus se detalla en Becerra (2018). 
-Aquí se extrajeron las `r nrow(oraciones)` oraciones donde explícitamente se incluía dicho término.
+Además, filtraremos la palabra "bigdata" ya que es esta justamente la que queremos definir por su contexto.
 
-**2do: a lo largo del doc se ven problemas en los datos. oraciones repetidas, con codigo en el texto, oraciones mal separadas, etc. me parece que vamso a tener que listar esos problemas y meter un paso de limpieza de corpus. hagamos esto cuando tengamos los resultados de la clasificacion**
+(También seleccionaremos algunas columnas para trabajar, pero esto solamente por comodidad).
 
-**2. Lexicones o diccionarios sentimentales:** 
+```{r}
 
-Particularmente se trabajó con dos diccionarios. 
+or_anotadas2 <- or_anotadas %>% 
+  select( doc_id, lemma, upos ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
+  filter(lemma != "bigdata")
+glimpse(or_anotadas2)
 
-En primer lugar, se trabajó con el *Spanish Dictionary Affect Language* (en adelante "SDAL"), desarrollado por Gravano & Dell’Amerlina Ríos (2014), que replica el modelo de Whissell (2009). Este es un lexicon formado por `r nrow(sdal)` términos, clasificados manualmente en tres dimensiones afectivas, de las cuales aquí utilizamos el agrado, el cual se expresa en un rango de 1 (negativo) a 3 (positivo) Es importante señalar que este diccionario incluye términos lemmatizados y transformados para incluir un sufijo que denote el tipo de palabra mencionada, a fin de evitar ambiguedades (e.g., "material_N" denota el sustantivo de "material", mientras "material_A" el adjetivo).
+```
 
-En segundo lugar, se trabajó con el *Lexicon de evocaciones a big data* (en adelante "EVOC"), desarrollado por Becerra & López-Alurralde (2020) en el marco de una investigación sobre las representaciones sociales del big data con la técnica de la evocación libre de palabras, a la que se añadió la posibilidad de aclarar la valoración del término incluído. Este es un lexicon formado por `r nrow(evoc)` términos. Este diccionario ya incluye los términos lemmatizados. Las valoraciones están expresadas en escala de 0 (negativo) a 10 (positivo).
+Es interesante señalar que pasamos de `r nrow(or_anotadas)` palabras parseadas y anotadas, a solo `r nrow(or_anotadas2)`, que son con las que trabajaremos.
 
-**3. Parser sintáctico de dependencias:**
+## Cruzamos tablas (lexicones)
 
-Se trabajó con el parser de *Udpipe Package for R*, con su modelo de lenguaje para español (Straka & Strakova, 2017). 
-Esto permitió obtener el árbol de dependencias para aplicar diferentes tratamientos dependiendo del tipo de oraciones, como se mencionó en mencionó en los Desafíos.
+Ahora podemos cruzar los lemmas de nuestras oraciones con los lexicones, para calcular la orientación de cada oración que incluye big data.
 
-## Preprocesamiento
+<!-- 2do: simplificar en 1 solo lexicon -->
 
+Vamos a trabajar con 2 lexicones:
 
-Para llevar a cabo los análisis se realizaron los siguientes pre-procesamientos.
+1. *Spanish Dictionary Affect Language* (`sdal`), desarrollado por @Gravano2014, que replica el modelo de @Whissell2009. Este es un lexicon formado por 2700+ términos, clasificados manualmente en tres dimensiones afectivas, de las cuales aquí utilizamos el agrado, el cual se expresa en un rango de 1 (negativo) a 3 (positivo). Es importante señalar que este diccionario incluye términos lemmatizados y transformados para incluir un sufijo que denote el tipo de palabra mencionada, a fin de evitar ambiguedades (e.g., "material_N" denota el sustantivo de "material", mientras "material_A" el adjetivo).
+2. *Lexicon de evocaciones a big data* (`evoc`), desarrollado por @Becerra2020 en el marco de una investigación sobre las representaciones sociales del big data con la técnica de la evocación libre de palabras, a la que se añadió la posibilidad de aclarar la valoración del término incluído. Este es un lexicon formado por 1500+ términos. Este diccionario ya incluye los términos lemmatizados. Las valoraciones están expresadas en escala de 0 (negativo) a 10 (positivo).
 
-* En el corpus de las oraciones: se anotó y lemmatizó con Udpipe, así como se convirtieron mayúsculas en minúsculas; luego, se filtraron sólo aquellas palabras que eran adjetivos, verbos, sustantivos y adverbios, los primeros 3 por ser los más informativos y presentes en los corpus, y los últimos como modificadores del sentido de las oraciones;
-* En SDAL se eliminaron los sufijos, calculando la media entre los términos ambiguos.
-* Tanto en SDAL como EVOC, se escalaron las valoraciones dentro del rango 0 (negativo) y 1 (positivo). 
+Vamos a uniformizar estos objetos para que sea más facil manipular las tablas: 
 
-**2do: habría que rehacer todo esto usando un rango de -1 a 1**
+* en ambos lexicones escalaremos las valoraciones `$v` dentro del rango -1 (negativo) y 1 (positivo);
+* en `sdal` eliminaremos los sufijos, calculando la media entre los términos ambiguos;
 
-Al finalizar el preprocesamiento quedamos con corpus de `r length(unique(oraciones_anotadas$lemma))` lemmas únicos, y diccionarios de `r nrow(sdal)` (SDAL) y `r nrow(evoc)` (EVOC).
+```{r}
+evoc <- readr::read_csv("./data/lexicon2021.csv") %>%
+  select(-X1, -f)%>%
+  filter(!is.na(lemma)) %>% 
+  filter(lemma!="bigdata") %>% mutate(v=((v/10)*2)-1) # llevar a -1|1
+sdal <- readxl::read_excel("./data/sdal.xlsx") %>%
+  mutate(lemma = str_extract(pattern = "[^_]+", string = palabra)) %>% 
+  group_by(lemma) %>%
+  summarise(v=mean(as.numeric(agrado))) %>% 
+  mutate(v=((v/3)*2)-1) # llevar a -1|1
+```
 
-Entre los diccionarios se observó sólo un solapamiento de términos del `r length(intersect(sdal$lemma, evoc$lemma)) / ( sum(nrow(sdal)) + sum(nrow(evoc)) ) * 100`%.
+Ahora sí: vamos a cruzar tablas! Particularmente, nos interesa ver si los lemmas que extrajimos de nuestras oraciones coinciden con los lemmas en los lexicones. En cuyo caso, vamos a anotar la media de las valoraciones de estos lexicones, junto con la cantidad de lemmas que tomamos de cada oracion (para saber cuantos lemmas con valoraciones hay en la oracion).
 
+Para cruzar tablas usaremos los verbos `_join`, o más específicamente, `left_join` que mantiene todas las filas de nuestra tabla, agregandole las columnas con los valores de otra. Para hacer el cruce de tablas, `_join` utiliza las columnas de nombre coincidente (aunque podés especificar los pares con `by = c("x"="y")`).
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+Esta es una opción de unión entre otras: `left_join`, `inner_join`, `anti_join`.
+[Tomado de https://es.r4ds.hadley.nz/datos-relacionales.html](images/join-venn.svg)
 
-# voy a hacer los cruces con los diccionarios para evaluar cuan cubiertos estamos 
-# y ver si arroja resultados esperables
+<!-- 2do: hay mucho por simplificar -->
 
-oraciones_x_evoc <- oraciones_anotadas %>% 
+```{r}
+oraciones_x_evoc <- or_anotadas2 %>% 
   select(doc_id, lemma) %>% 
   left_join(evoc %>% select(lemma,v)) %>%
   group_by(doc_id) %>%
@@ -179,11 +172,10 @@ oraciones_x_evoc <- oraciones_anotadas %>%
     cruzadas_n=length(v[!is.na(v)]),
     cruzadas_lemmas=paste(lemma[!is.na(v)], collapse = " "),
     cruzadas_percent=cruzadas_n/lemmas,
-    oracion_original=paste(lemma, collapse = " "),
-    positiva=if_else(condition = valor>=.5, true = 1, false = 0)
+    oracion_original=paste(lemma, collapse = " ")
   ) 
 
-oraciones_x_sdal <- oraciones_anotadas %>% 
+oraciones_x_sdal <- or_anotadas2 %>% 
   select(doc_id, lemma) %>% 
   left_join(sdal %>% select(lemma,v)) %>%
   group_by(doc_id) %>%
@@ -193,8 +185,7 @@ oraciones_x_sdal <- oraciones_anotadas %>%
     cruzadas_n=length(v[!is.na(v)]),
     cruzadas_lemmas=paste(lemma[!is.na(v)], collapse = " "),
     cruzadas_percent=cruzadas_n/lemmas,
-    oracion_original=paste(lemma, collapse = " "),
-    positiva=if_else(condition = valor>=.5, true = 1, false = 0)
+    oracion_original=paste(lemma, collapse = " ")
   ) 
 
 dix_juntos <- rbind(
@@ -203,7 +194,7 @@ dix_juntos <- rbind(
     ) %>% 
   group_by( lemma ) %>% summarise(v=mean(v))
 
-oraciones_x_ambos <- oraciones_anotadas %>% 
+oraciones_x_ambos <- or_anotadas2 %>% 
   select(doc_id, lemma) %>% 
   left_join(dix_juntos %>% select(lemma,v)) %>%
   group_by(doc_id) %>%
@@ -213,24 +204,22 @@ oraciones_x_ambos <- oraciones_anotadas %>%
     cruzadas_n=length(v[!is.na(v)]),
     cruzadas_lemmas=paste(lemma[!is.na(v)], collapse = " "),
     cruzadas_percent=cruzadas_n/lemmas,
-    lemmas_a_evaluar=paste(lemma, collapse = " "),
-    positiva=if_else(condition = valor>=.5, true = 1, false = 0)
+    lemmas_a_evaluar=paste(lemma, collapse = " ")
   ) 
-
 
 ```
 
 El diccionario EVOC cruza con el `r oraciones_x_evoc %>% filter(!is.na(valor)) %>% nrow() / nrow(oraciones_x_evoc) * 100`% de las oraciones del corpus, en al menos 1 palabra. El cuadro a continuación muestra la distribución de % de lemmas que quedan cubiertos con EVOC.
 
-```{r echo=FALSE}
+```{r}
 
 oraciones_x_evoc %>% ggplot(aes(x=cruzadas_percent)) + geom_histogram(bins=10)
 
 ```
 
-El diccionario SDAL cruza con el `r oraciones_x_sdal %>% filter(!is.na(valor)) %>% nrow() / nrow(oraciones_x_sdal) * 100`% de las oraciones del corpus, en al menos 1 palabra. El cuadro a continuación muestra la distribución de % de lemmas que quedan cubiertos con SDAL
+<!-- El diccionario SDAL cruza con el `r oraciones_x_sdal %>% filter(!is.na(valor)) %>% nrow() / nrow(oraciones_x_sdal) * 100`% de las oraciones del corpus, en al menos 1 palabra. El cuadro a continuación muestra la distribución de % de lemmas que quedan cubiertos con SDAL -->
 
-```{r echo=FALSE}
+```{r}
 
 oraciones_x_sdal %>% ggplot(aes(x=cruzadas_percent)) + geom_histogram(bins=10)
 
@@ -241,63 +230,21 @@ Como era de esperarse, dado el mayor número de términos, el diccionario que m�
 Si juntamos ambos diccionarios podemos ver que la amplia mayoría de oraciones queda cubierta en más del 50% de sus palabras.
 
 
-```{r echo=FALSE}
+```{r eval=FALSE, include=FALSE}
 
 oraciones_x_ambos %>% ggplot(aes(x=cruzadas_percent)) + geom_histogram(bins=10)
 
 ```
 
-Para corrobar estos datos, conviene cruzar ambos diccionarios, para ver su coincidencia en identificar una oración de sentido positivo. Como podemos ver, hay coincidencia casi en un 90% de los cruces.
-
-```{r}
-
-oraciones_x_evoc %>% 
-  select(doc_id,positiva) %>% 
-  left_join(oraciones_x_sdal %>% select(doc_id,positiva), by = "doc_id") %>%
-  mutate(coinciden=positiva.x==positiva.y) %>%
-  pull(coinciden) %>% table() / nrow(oraciones)
-
-rm(oraciones_x_evoc, oraciones_x_sdal)
-
-```
-<!-- # Sistema basado en aprendizaje automático; -->
-<!-- # Sistema híbrido. -->
-
-# ANALISIS de Sistema I
-
-**2do: esto deberia ser otro capitulo, al igual que el resutaldo de cada enfoque**
-
-```{r}
-
-# meter el sentiment analysis aca
-
-# ver con amplificadores
-
-# testear con las mas / menos valoradas, con la tabla loca (original | keywords)
-
-# ver si los resultados mejoran con un umbral de % de palabras incluidas
-
-```
-
-Para identificar la polaridad de la oración ensayamos distintos caminos:
-
-## Caso mínimo (borrar!)
-
-**2do: esta seccion hay que borrarla, es solo para saber donde estamos parados**
-
-**2do: cuando tengamos una base de oraciones clasificadas a mano, podemos cruzarla con los resultados del sistema I para ver cuan efectivo fue este enfoque con diccionarios**
-
-**2do: habria que 
-
 El caso mínimo buscó detectar la polaridad de la oración calculando un valor global, promediando las palabras de la oración.
 
-```{r echo=TRUE, message=FALSE}
- 
+```{r}
+
 valoraciones <- oraciones_x_ambos %>% 
   group_by(doc_id) %>% 
   summarize(valor = mean(valor, na.rm = TRUE), 
             palabras = n()) %>%
-  inner_join(oraciones_anotadas %>% count(doc_id)) # largo de la oracion
+  inner_join(or_anotadas2 %>% count(doc_id)) # largo de la oracion
 
 glimpse(valoraciones)
 
@@ -325,10 +272,9 @@ valoraciones %>%
 
 El resultado es claramente pésimo, pero ya sabemos desde donde arrancamos.
 
-Podríamos ver si mejora filtrando los lemmas considerados
+Podríamos ver si mejora filtrando la cantidad de palabras que cruzan... asi no inferimos el sentido de toda una oracion por una fracción de sus palabras.
 
-
-```{r echo=TRUE, message=FALSE}
+```{r message=FALSE}
 
 valoraciones %>%
   inner_join(oraciones_x_ambos) %>% 
@@ -351,6 +297,8 @@ valoraciones %>%
 
 ahora tiene un poco mas de sentido. vamos con los negativos.
 
+<!-- 2do: hay repetidos ... cualquiera -->
+
 ```{r message=FALSE}
 
 # valoraciones %>%
@@ -359,7 +307,6 @@ ahora tiene un poco mas de sentido. vamos con los negativos.
 #   inner_join(oraciones) %>%
 #   mutate(cruzadas_n = str_count(cruzadas_lemmas, '\\w+')) %>%
 #   select(lemmas_
-
 
 valoraciones %>%
   inner_join(oraciones_x_ambos) %>% 
@@ -414,39 +361,39 @@ valoraciones %>%
 
 ```
 
-**2do: igual habría que ensayar distintas combinaciones de la cantidad de palabras cruzadas con el diccionario (cruzada_n) y la cantidad de lemmas que hubo que evaluar (post filtrar adj, nouns, verbs, etc.)**
+<!-- 2do: igual habría que ensayar distintas combinaciones de la cantidad de palabras cruzadas con el diccionario (cruzada_n) y la cantidad de lemmas que hubo que evaluar (post filtrar adj, nouns, verbs, etc.) -->
 
-**2do: otra cosa a revisar para tener una idea de si los resultados tienen sentido: hay que ver la distribucion de oraciones clasificadas. me parece que hay un 99% de casos positivos...**
+<!-- 2do: otra cosa a revisar para tener una idea de si los resultados tienen sentido: hay que ver la distribucion de oraciones clasificadas. me parece que hay un 99% de casos positivos... -->
 
-**2do: y ademas, todo esto está calculado con un dix que no está muy balanceado entre positivos/negativos, creo. esto hay que chequearlo, y habria que considerar formas de corregirlo a la hora de calcular los scores**
+<!-- 2do: y ademas, todo esto está calculado con un dix que no está muy balanceado entre positivos/negativos, creo. esto hay que chequearlo, y habria que considerar formas de corregirlo a la hora de calcular los scores -->
 
 
-## Con packs(txt_sentiment)
+## Con packs(txt_sentiment de udpipe)
 
 vamos con txt_sentiment de udpipe
 
-```{r echo=FALSE}
+```{r}
 
-polarity_negators <- read.table("./dataes/polarity_negators.txt",
+polarity_negators <- read.table("data/polarity_negators.txt",
                                 header = FALSE, sep = "", dec = ".") %>% unlist()
-polarity_amplifiers <- read.table("./dataes/polarity_amplifiers.txt",
+polarity_amplifiers <- read.table("data/polarity_amplifiers.txt",
                                   header = FALSE, sep = "", dec = ".") %>% unlist()
-polarity_deamplifiers <- read.table("./dataes/polarity_deamplifiers.txt",
+polarity_deamplifiers <- read.table("data/polarity_deamplifiers.txt",
                                     header = FALSE, sep = "", dec = ".") %>% unlist()
 
 dix_juntos2 <- dix_juntos %>% mutate %>% select(term=lemma,polarity=v)
 
-scores <- txt_sentiment(x = oraciones_anotadas,
-                        term = "lemma",
-                        polarity_terms = dix_juntos2, # modifico para rango -1 a 1
-                        polarity_negators = polarity_negators,
-                        polarity_amplifiers = polarity_amplifiers,
-                        polarity_deamplifiers = polarity_deamplifiers)
-
-scores$overall
-
-scores$overall %>% slice_max(order_by = sentiment_polarity, n=10) %>%
-  inner_join(oraciones)
+# scores <- txt_sentiment(x = or_anotadas2,
+#                         term = "lemma",
+#                         polarity_terms = dix_juntos2, # modifico para rango -1 a 1
+#                         polarity_negators = polarity_negators,
+#                         polarity_amplifiers = polarity_amplifiers,
+#                         polarity_deamplifiers = polarity_deamplifiers)
+# 
+# scores$overall
+# 
+# scores$overall %>% slice_max(order_by = sentiment_polarity, n=10) %>%
+#   inner_join(oraciones)
 
 ```
 
@@ -458,85 +405,27 @@ por eso me parece que las oraciones mas largas (generalmente oraciones mal parse
 
 vamos con la polaridad dividida por la cantidad de palabras:
 
-```{r echo=FALSE}
+```{r eval=FALSE, include=FALSE}
 
-scores$overall %>% mutate(polarity_terms = sentiment_polarity/terms)  %>%
-  slice_max(order_by = polarity_terms, n=10) %>%
-  inner_join(oraciones)
+# scores$overall %>% mutate(polarity_terms = sentiment_polarity/terms)  %>%
+#   slice_max(order_by = polarity_terms, n=10) %>%
+#   inner_join(oraciones)
 
 ```
 
 bueno... estos resultados se ven mejor. al menos cuando las leemos parecen ser todas positivas...
 
-
-```{r eval=FALSE, include=FALSE}
-
-# lo que sigue estaba en main.R, no lleue a verlo
-
-
-# Agregando el peso del amplificador, TODO leer la parte de escala de valores de polaridades, agregar -1, 1 segun escala 
-# < 5 y > 5
-
-scores <- udpipe:txt_sentiment(x = oraciones_anotadas,
-                        term = "lemma",
-                        polarity_terms = lex_sdal3,
-                        polarity_negators = polarity_negators3,
-                        polarity_amplifiers = polarity_amplifiers3,
-                        polarity_deamplifiers = polarity_deamplifiers3,
-                        constrain = TRUE, n_before = 4,
-                        n_after = 2, amplifier_weight = .8)
-
-view(scores$overall)
-view(scores$data)
-#lo mismo usando levok
-
-lex_evok3 <- select (lex_evok, term= lemma, polarity=v)
-
-lex_evok3 <- lex_evok3 %>%  mutate(polarity = case_when(
-  polarity < 5  ~ -1,
-  polarity == 5 ~ 0  ,
-  polarity > 5  ~ 1
-))
-scores <- txt_sentiment(x = oraciones3,
-                        term = "lemma",
-                        polarity_terms = lex_evok3,
-                        polarity_negators = polarity_negators3,
-                        polarity_amplifiers = polarity_amplifiers3,
-                        polarity_deamplifiers = polarity_deamplifiers3)
-
-
-view(scores$overall)
-view(scores$data)
-
-scores <- txt_sentiment(x = oraciones3,
-                        term = "lemma",
-                        polarity_terms = lex_evok3,
-                        #polarity_terms = data.frame(term = c("annoy", "like", "painful"),
-                        #                            polarity = c(-1, 1, -1)),
-                        polarity_negators = polarity_negators3,
-                        polarity_amplifiers = polarity_amplifiers3,
-                        polarity_deamplifiers = polarity_deamplifiers3,
-                        constrain = TRUE, n_before = 4,
-                        n_after = 2, amplifier_weight = .8)
-view(scores$overall)
-view(scores$data)
-
-```
-
-
 ## Con packs(sentimentR)
 
 finalmente, vamos con sentimentr, que esta tirando algunos warnings
 
-```{r echo=TRUE}
+```{r}
 
 library("sentimentr")
 
 sentr_oraciones <- get_sentences(oraciones$oracion)
 sentr_key <- dix_juntos2 %>% select(words=term , polarity) 
-is_key(sentr_key)
 sentr_mykey <- as_key(sentr_key)
-is_key(sentr_mykey)
 
 sentr_result <- sentiment(sentr_oraciones, polarity_dt = sentr_mykey)
 
@@ -553,64 +442,7 @@ sentr_result %>% slice_max(order_by = sentiment, n=10)
 hist(sentr_result$sentiment)
   
 ```
-**2do: hay que revisar la documentacion... es normal que haya sentimiento = 3??? por otro lado, aca tambien hay mas frecuencia positiva, por ahi se puede hacer alguna comprobacion para cruzar con txt_sentiment**
 
-**2do: para explorar los resultados de sentimentr hay que ver algunas cosas: parece que te separa las oraciones, y como nuestro corpus tiene algunas oraciones juntas que hay que limpiar, esta agregando oraciones a la base original. de 4100 pasamos a 5777. ademas, como labura con vectores, perdimos la referencia al id del doc original, asi que es medio dificil incluso pegarle la oracion original para ver si los resultados son convincentes**
+<!-- **2do: hay que revisar la documentacion... es normal que haya sentimiento = 3??? por otro lado, aca tambien hay mas frecuencia positiva, por ahi se puede hacer alguna comprobacion para cruzar con txt_sentiment** -->
 
-
-
-
-
-
-
-<!-- ### problemas de los sistemas x lexicones -->
-
-
-<!-- 5.1. Anotación del corpus -->
-<!-- Luego de obtenidas las oraciones se procedió a la anotación: el proceso de marcar cada una de -->
-<!-- ellas manualmente como positiva, neutral o negativa, además de descartar las que por algún -->
-<!-- motivo no debieran pertenecer al corpu -->
-<!-- ara facilitar este proceso, se creó una web privada para usuarios (anotadores), en la que se -->
-<!-- puede etiquetar de forma sencilla e intuitiva. La interfaz ofrece la posibilidad de etiquetar cada -->
-<!-- opinión del corpus o borrarla si está malformada o incompleta. Cada etiquetado se guarda en -->
-<!-- una base de datos junto con los del resto de los anotadores -->
-
-<!-- 5.1.1. Anotadores -->
-<!-- Antes de comenzar a anotar, fue necesario resolver la cantidad de anotadores necesarios para -->
-<!-- lograr un corpus completo y correctamente anotado. -->
-<!-- Se consideró el escenario de hacer pública la página web y permitir que cualquier persona -->
-<!-- pudiera etiquetar las opiniones. De esta manera se podía distribuir el trabajo de la anotación -->
-<!-- y conseguir una mayor cantidad de opiniones etiquetadas. -->
-<!-- Sin embargo, luego de la etapa de análisis de las opiniones del corpus extraído de BuscOpiniones, explicado con detalle en la sección A.2, se observó que muchas de las opiniones son -->
-<!-- complejas de etiquetar. Esta complejidad hace que para lograr que cualquier usuario etiquete -->
-<!-- las opiniones sea necesario que realice una etapa de capacitación previa, donde se unifiquen -->
-<!-- los criterios de la anotación. En caso contrario, cada anotador elegiría un camino distinto para -->
-<!-- la resolución de estos problemas, conllevando un alto riesgo de que exista mucha diferencia de -->
-<!-- criterios en las anotaciones. -->
-<!-- Al ser una condición necesaria que los anotadores entiendan bien el problema, se decidió -->
-<!-- mantener la web privada, y que la anotación sea llevada a cabo únicamente por los integrantes -->
-<!-- del proyecto, aprovechando el conocimiento del problema generado en la etapa inicial del -->
-<!-- proyecto -->
-
-
-<!-- Sistema basado en aprendizaje automático: Como se explicó anteriormente, para lograr crear un sistema que clasifique opiniones -->
-<!-- basado en aprendizaje automático fue necesario anotar un corpus de entrenamiento. -->
-<!-- El preprocesamiento de las opiniones genera tuplas basadas en las palabras que aparecen. -->
-<!-- Además, se agregan features basadas en el conteo de palabras positivas y negativas, -->
-<!-- agrupadas por categoría gramatical. -->
-<!-- Los algoritmos de aprendizaje utilizados son Multinomial Naive Bayes y Support Vector -->
-<!-- Machines, dos de los más utilizados en el área. -->
-
-<!-- Sistema híbrido: Recibe como features no solamente la información del clasificador explicado anteriormente, sino también la generada por los métodos de reglas. -->
-<!-- El objetivo es que las nuevas features le permitan aprender de las relaciones sintácticas -->
-<!-- entre los constituyentes de las opiniones que fueron analizadas por las reglas, así como -->
-<!-- del resultado del sistema de reglas. -->
-<!-- Como fue explicado en la sección 2.2, la negación es el principal elemento que cambia la -->
-<!-- polaridad de un término. Por lo tanto, la información sobre si una palabra está negada -->
-<!-- es una de las principales modificaciones que se agregan a la entrada del clasificador. -->
-<!-- La implementación de la solución del problema se detalla en el capitulo 6 -->
-
-
-<!-- ### problemas con clasificadores -->
-
-<!-- Los métodos de aprendizaje automático son los más utilizados últimamente en el área generando buenos resultados. Sin embargo, requieren para ello de contar con un corpus de entrenamiento lo suficientemente amplio como para abarcar todos los ejemplos de los cuales se aprende. -->
+<!-- **2do: para explorar los resultados de sentimentr hay que ver algunas cosas: parece que te separa las oraciones, y como nuestro corpus tiene algunas oraciones juntas que hay que limpiar, esta agregando oraciones a la base original. de 4100 pasamos a 5777. ademas, como labura con vectores, perdimos la referencia al id del doc original, asi que es medio dificil incluso pegarle la oracion original para ver si los resultados son convincentes** -->

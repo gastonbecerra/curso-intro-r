@@ -1,4 +1,4 @@
-# ¿Cuál es el sentido común acerca del big data?
+# Explorar, manipular y visualizar datos
 
 En este capítulo vamos a intentar responder **cuál es el sentido común en torno al big data**. Esto nos ubica en las coordenadas de la psicología social, particularmente de la *teoría de la representación social*, a la que nos acercaremos siguiendo la variante estructural de @Abric2001, y recurriendo a técnicas cuantitativas.
 
