@@ -1,4 +1,4 @@
-# Entrenamiento no-supervisado: Modelamiento de tópicos
+# Modelamiento de tópicos
 
 En este capítulo vamos a intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. 
 
@@ -8,10 +8,28 @@ A lo largo de este ejercicio veremos:
 
 1. cómo pre-procesar texto para su posterior análisis;
 2. cómo construir tablas que crucen documento x términos;
-2. cómo modelar tópicos;
+3. cómo modelar tópicos;
 3. cómo interpretar los tópicos.
 
-### Cargar datos y recursos
+## Cargar datos y recursos
+
+```{r eval=FALSE, include=FALSE}
+
+# elegir 5 fuentes y cortar 20 de cada uno
+
+x <- readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda")
+
+readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda") %>%
+  select(link=items.link, txt=fullContent, fuente=items.displayLink, titulo=items.title) %>% 
+  filter(fuente %in% 
+           c("www.clarin.com", "www.iprofesional.com", "www.pagina12.com.ar", "tn.com.ar", "www.telam.com.ar"),
+         !is.na(txt)) %>%
+  group_by(fuente) %>% sample_n(20) %>%
+  ungroup() %>%
+  mutate(id=1:n()) %>%
+  saveRDS(file = "data/noticias_curso.rds")
+```
+
 
 En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse` para XXX.
 
@@ -22,12 +40,11 @@ En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse
 
 ```{r echo=TRUE, message=TRUE, warning=FALSE}
 library(tidyverse) 
-
 noticias <- readRDS(file = "data/noticias_curso.rds") %>% mutate(id=1:n())
 glimpse(noticias) # miramos la estructura de la base
 ```
 
-### Pre-procesamiento de texto
+## Pre-procesamiento de texto
 
 Para poder completar nuestros análisis primeros realizaremos varias tareas de preprocesamiento:
 
@@ -54,14 +71,12 @@ modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
 Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y *anotar* qué tipo de componente es cada palabra, además de lemmatizarlas.
 
 ```{r eval=F, echo=T}
-
 noticias_anotadas <- udpipe_annotate( 
   object = modelo_sp, # el modelo de idioma
   x = noticias$txt, # el texto a anotar, 
   doc_id = noticias$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
-  trace = 50
+  trace = 20
   ) %>% as.data.frame(.) # convertimos el resultado en data frame
-
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -71,7 +86,6 @@ noticias_anotadas <- udpipe_annotate(
 
 # tomamos el parseado
 noticias_anotadas <- readr::read_csv(file = "data_ignore/noticias_anotadas.csv")
-
 ```
 
 Vamos a examinar la tabla con las oraciones parseadas:
@@ -86,34 +100,412 @@ Las siguientes variables nos interesan para preparar los datos para el análisis
 * `lemma`: incluye la forma lemmatizada de la palabra, sin género, en singular, y sin conjugación, y la vuelve minúscula (e.g., "es" se vuelve "ser", y "Datos" se conviernete en "dato");
 * `upos`: nos permite aclarar qué tipo de palabra es;
 
-También notemos que la anotación convirtió la columna `doc_id` en una columna de texto. Conviene que corrijamos esto:
-
-```{r}
-noticias_anotadas <- noticias_anotadas %>% mutate(doc_id=as.integer(doc_id))
-```
-
-
 <!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
 
-Aquí empiezan las decisiones que afectarán la calidad de los análisis, en relación al tipo de resultados que busquemos.
-
-Nuestra primera decisión es aprovechar la información de `upos` para quedaremos con las palabras que probablemente tengan mayor peso para conferir una orientación positiva o negativa: adjetivos, verbos, sustantivos y adverbios.
-
-Además, filtraremos la palabra "bigdata" ya que es esta justamente la que queremos definir por su contexto.
+Al igual que en el tutorial anterior, usaremos la información de `upos` para filtrar las palabras que podrían ser más signficativas: adjetivos, verbos, y sustantivos. 
+Aquí omitimos los adverbios, ya que no nos interesan las posibles modificaciones del sentido entre palabras cercanas, como negaciones o amplificaciones.
+Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`.
 
 (También seleccionaremos algunas columnas para trabajar, pero esto solamente por comodidad).
 
 ```{r}
+
 noticias_anotadas2 <- noticias_anotadas %>% 
-  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
-  select( doc_id, lemma ) # seleccionamos solo las columnas que nos interesan, esto no es necesario
-  
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN") %>% # filtramos por tipo de palabra
+  select( doc_id, lemma ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
+  filter(!lemma %in% stopwords::stopwords(language = "es")) %>% # filtrar las que no están en la tabla de stopwords
+  filter(!lemma %in% c("ser", "decir", "tener", "haber", "estar", "hacer", "ver", "leer")) # filtramos verbos muy comunes
 glimpse(noticias_anotadas2)
 ```
 
-Es interesante señalar que pasamos de `r nrow(noticias_anotadas)` palabras parseadas y anotadas, a solo `r nrow(noticias_anotadas2)`, que son con las que trabajaremos.
 
-### Vectorizar
+## Sobre el modelo LDA
+
+Para construir los tópicos usaremos el modelo Latent Dirichlet Allocation (D. Blei, Ng, & Jordan, 2003), a través del pack `topicmodels` (Grün & Hornik, 2011). Este modelo genera *tópicos* proponiendo una cierta distribución de todas las palabras del corpus, y calcula la distribución de estos tópicos en cada documentos. 
+
+Lo interesante de esta manera de operativizar los temas, es que cada tópico puede ser entendido como un campo semántico, un conjunto de palabras que suelen correlacionar en distintos documentos. Luego, en el momento del análisis de estos resultados, buscaremos inferir un tema a partir de las palabras que más contribuyen a cada tópico. E.g., podríamos inferir de un tópico en el que contribuyen fuertemente los términos "venta", "producto" y "comprador", el tema "comercio". Según uno de los autores del modelo, la interpretabilidad de la mayoría de los temas es el resultado de “la estructura estadística del lenguaje y cómo interactúa con los supuestos probabilísticos específicos de LDA” (D. Blei, 2012, p. 79). 
+
+A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los tópicos con una "contribución" relativa. Esto es justamente lo que nos interesa ya queremos comparar distintas maneras de "contextualizar" al mismo término ("big data") a través de distintos tópicos, caracterizados por el uso de ciertas otras palabras. 
+
+## Aplicar LDA
+
+Empezaremos calculando la distribución de palabras de cada documento. 
+
+<!-- 
+2do: usar it_dft 
+Otro punto de partida podría ser calcular palabras significativas, calculando con un peso más bajo a aquellas palabras que aparecen en más documentos. Usaremos este segundo enfoque más adelante. 
+-->
+
+Luego, convertiremos esta tabla en un objeto `DocumentTermMatrix` del pack `tm`, utilizando la función `cast_dtm` de la librería `tidytext`.
+
+```{r}
+library(tidytext)
+noticias_dtm <- noticias_anotadas2 %>%
+  count(doc_id, lemma, sort = TRUE) %>%
+  cast_dtm(doc_id, lemma, n)
+noticias_dtm
+```
+
+Esto nos informa la cantidad de documentos y la cantidad de palabras distintas, y nos indica un % de palabras que aparecen 0 veces en un documento (Sparsity). 
+
+Luego, vamos a construir el modelo con la función `LDA`. 
+Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
+
+```{r eval=F, echo=T}
+k_topics <- 5 # numero de topicos
+noticias_tm <- topicmodels::LDA(noticias_dtm, k = k_topics, control = list(seed = 1234))
+noticias_tm
+```
+
+```{r eval=T, echo=F}
+# saveRDS(noticias_tm, file = "data_ignore/noticias_tm.rds")
+noticias_tm <- readRDS(file = "data_ignore/noticias_tm.rds")
+```
+
+<!-- 2do: estuve hablando de distribuciones pero serian distribuciones probables -->
+
+Ahora vamos a exportar los resultados en los 2 formatos que nos interesa explorar, utilizando la función `tidy`, y especificando la qué probabilidades que nos interesan:
+
+* **beta**: probabilidad *topico x palabra*;
+* **gamma**: probabilidad *topico x documento*;
+
+```{r}
+noticias_tm_beta <- tidy(noticias_tm, matrix = "beta")
+noticias_tm_gamma <- tidy(noticias_tm, matrix = "gamma")
+glimpse(noticias_tm_beta)
+glimpse(noticias_tm_gamma)
+```
+
+## Interpretar el modelo
+
+### Inferir tópicos desde términos y documentos (análisis cualitativo)
 
 xxx
+
+```{r}
+noticias_tm_beta %>% # principales términos en cada tópico
+  group_by(topic) %>%
+  top_n(15, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>% # vamos a mostrarlo como grafico
+  ggplot(aes(x=term,y=beta)) + 
+    geom_col() +
+    facet_wrap(~topic, scales = "free") +
+  coord_flip()
+```
+
+<!-- # UNA VEZ ANALIZADOS, PEGO LOS NOMBRES Y DESCARTO LOS QUE NO LES ENCONTRAMOS SENTIDO -->
+
+topicos_nombres <- c("1. Social networks",
+                     "2. Biz. int.",
+                     "3. X",
+                     "4. Society",
+                     "5. X",
+                     "6. Politics (international)",
+                     "7. Politics (national)",
+                     "8. X",
+                     "9. Jobs",
+                     "10. Elections (national)",
+                     "11. X",
+                     "12. X",
+                     "13. Tourism / Urban",
+                     "14. Data",
+                     "15. Elections (international)",
+                     "16. IA",
+                     "17. Apps and platforms",
+                     "18. Investments",
+                     "19. Privacy",
+                     "20. eCommerce",
+                     "21. X",
+                     "22. Agro",
+                     "23. Education and science",
+                     "24. Health",
+                     "25. X")
+topicos_desechados <- c(3, 5, 8, 11, 12, 21, 25) # topicos que no les encuentro sentido
+
+
+
+<!-- # ESTABLEZCO UN CRITERIO DE CORTE PARA LAS MUESTRAS DE DOCUMENTOS POR TOPICOS -->
+
+table(topicos_documentos$topic_label) # distribucion en topicos (rank1)
+corte_rank1<-mean(topicos_documentos$topic_prob) # valor medio de rank1
+corte_rank2<-mean(topicos_documentos$topic_probdiff_2nd) # valor medio de diferencia con rank2
+corte <- mean(topicos_documentos$topic_prob) - mean(topicos_documentos$topic_probdiff_2nd) # valor de corte?
+
+x<-topicos_documentos_tidy %>% filter(score>corte_rank2) %>% group_by(topic) %>% tally(sort = TRUE) # %>% summarise(q=mean(n),s=sd(n))
+x$topic
+x$n
+mean(x$n);sd(x$n);sd(x$n)/mean(x$n)
+
+x$n / nrow(noticias_scrap_y_metadata) * 100
+  
+  
+
+topicos_documentos_graficos <- topicos_documentos_tidy %>% # una tabla auxiliar para simplificar los graficos
+  mutate(topic_name = gsub(pattern = "topic_", replacement = "", topic )) %>%
+  mutate(topic_id = as.integer(stringi::stri_match_first_regex(topic_name, "(.*?)\\.")[,1]))
+
+topicos_documentos_graficos %>% # distribucion documentos por topicos con cortes
+  ggplot(aes(y=score,x=topic_name)) + 
+  geom_boxplot() + 
+  geom_hline(color="red", yintercept = corte ) + # media de rank1 - diferencia con rank2
+  geom_hline(color="blue", yintercept = corte_rank1 ) + # rank1
+  geom_hline(color="blue", yintercept = corte_rank2 ) + # rank2
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+
+  scale_y_continuous("topic score", breaks = seq(0,1,0.1))
+
+<!-- # ARMO UNA TABLA CON TOPICOS, TERMINOS, Y SCORES (RANK1 Y CORTE) -->
+
+rank_corte <- as.data.frame(topicos_nombres) %>% # primero armo una tabla con la cantidad de documentos dentro de ese valor de corte ...
+  rename(topic_name=topicos_nombres) %>%
+  right_join( topicos_documentos_graficos %>% 
+    filter(! topic_id %in% topicos_desechados ) %>%
+    group_by(topic_name) %>% filter(score > corte) %>% summarize(corte=n()) ) %>% 
+  inner_join( # ... y ahora le sumo el rank1 ...
+    as.data.frame(table(topicos_documentos$topic_label)) %>% transform(topic_name=as.character(Var1)) %>% 
+      rename(Rank1=Freq) %>% select(topic_name,Rank1) 
+  )
+terminos_rank <- rank_corte %>% transform(topic=as.integer(gsub("\\..*","",topic_name))) %>% inner_join(topicos_palabra_top) # ... y ahora le sumo las palabras ...
+write.csv( terminos_rank, file = paste0("terminos_rank_", topicos_K, "topics", "_",format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv")) # ... y lo exporto
+
+<!-- # EXPORTO UNA TABLA DE LINKS A NOTICIAS POR TOPICO (PARA LOS ANALISIS CUALI ES MAS COMODO LEER DESDE LA FUENTE) -->
+
+noticias_para_anotar <- readRDS("noticiasLimpias_2026_20191003_175315.rda")
+topicos_documentos %>% 
+  select(doc_id, topic, topic_prob, topic_label) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, items.link )) %>%
+  write.table(file=paste0("noticias_links_topicos_",k_topics,"_topicos.txt") , row.names = FALSE , quote = FALSE , col.names = TRUE , sep = "|")
+
+
+### Comparar tópicos
+
+
+<!-- # CALCULO DISTANCIA ENTRE LOS VOCABULARIOS DE CADA TOPICO -->
+
+topicos_palabra_phi <- as.data.frame(t( topicos_palabra_tidy %>% spread(key = topic, value = beta) )) # en lo que sigue preparo phi, para calcular Hellinger
+colnames(topicos_palabra_phi) <- as.vector( t( topicos_palabra_phi[1,] ))
+topicos_palabra_phi <- topicos_palabra_phi[-1,] 
+rownames(topicos_palabra_phi[-topicos_desechados,]) <- topicos_nombres[-topicos_desechados]
+topicos_palabra_phi <- as.matrix(topicos_palabra_phi)
+topicos_palabra_phi <- type.convert(topicos_palabra_phi)
+hc_vocabulario<-hclust(as.dist(textmineR::CalcHellingerDist(topicos_palabra_phi[-topicos_desechados,])), "ward.D")
+plot(hc_vocabulario,labels = topicos_nombres[-topicos_desechados], sub = "", main = "" , xlab = "Topics")
+rm(topicos_palabra_phi,hc_vocabulario)
+
+
+<!-- # CORRELACIONES DE TOPICOS (por distribucion basica en documentos) -->
+
+lqs<-setdiff((1:25+5),(topicos_desechados+5))
+topic_scores_corr <-  cor( topicos_documentos[lqs] , method = "pearson") # correlacion entre topicos asignados a articulos
+ggcorrplot::ggcorrplot(topic_scores_corr, outline.col = "white", show.legend = FALSE,
+                       type = "lower", colors = colorRampPalette(c("red","white","green"))(3),
+                       lab = TRUE, insig = "blank", method = "square", 
+                       hc.order = TRUE , hc.method = "complete")
+ggsave(filename = "graficos/correlaciones.jpg",width=15,height = 15,units = "cm",dpi=300)
+topic_scores_corr %>% corrr::correlate() %>% corrr::network_plot()
+rm(lqs, topic_scores_corr)
+
+
+
+### Buscar variaciones en metadatos ()
+
+distribución por source
+
+
+```{r}
+noticias_tm_gamma %>%
+  mutate(id=as.integer(document)) %>%
+  left_join(noticias %>% select(id,fuente)) %>%
+  ggplot(aes(x=fuente,y=gamma)) +
+    geom_boxplot() +
+    facet_grid(~topic) + 
+    coord_flip()
+```
+
+
+
+### Buscar variaciones en contenidos (lexicones)
+
+
+<!-- # % articulos que dicen "big data" en los primeros 200 x topico -->
+
+str(topicos_documentos_graficos)
+topicos_documentos_graficos %>% # proporcion de articulos que dicen big data en titulo
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, keyTitulo ) ) %>%
+  group_by(topic_name) %>%
+  summarise(bgEnTitulo=sum(keyTitulo)) %>%
+  mutate( bgEnTitulo = (bgEnTitulo/200)*100 ) %>%
+  ggplot(aes(x=reorder(topic_name,bgEnTitulo),y=bgEnTitulo)) + 
+  geom_col() +
+  theme_minimal() + 
+  coord_flip() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/bg_en_titulo.jpg",width=6,height = 7,units = "cm",dpi=300)
+
+<!-- # q articulos que dicen las 3 v -->
+
+x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
+  mutate( 
+    volumen = if_else( grepl("volumen", text, ignore.case = TRUE) ,  1 , 0),
+    variedad = if_else( grepl("variedad", text, ignore.case = TRUE), 1 , 0),
+    velocidad = if_else( grepl("velocidad", text, ignore.case = TRUE), 1 , 0) ) 
+x <- x %>% mutate( vvv = volumen + variedad + velocidad)  
+x %>% group_by( topic_name ) %>% summarise(n=sum(vvv)) %>%
+  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
+  geom_col() +
+  theme_minimal() + 
+  coord_flip() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/3v.jpg",width=6,height = 7,units = "cm",dpi=300)
+rm(x)
+
+<!-- # q articulos que dicen *byte -->
+
+topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
+  mutate( 
+    byte = if_else( grepl("byte", text, ignore.case = TRUE) ,  1 , 0)) %>% 
+  group_by( topic_name ) %>% summarise(n=sum(byte)) %>%
+  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
+  geom_col() +
+  theme_minimal() + 
+  coord_flip() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/byte.jpg",width=6,height = 7,units = "cm",dpi=300)
+
+<!-- # TOPICO 16, 1 Y 17: BIG DATA -->
+
+<!-- # q articulos que dicen platform -->
+
+x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
+  mutate( 
+    plataforma = if_else( grepl("plataforma", text, ignore.case = TRUE) ,  1 , 0),
+    algoritmo = if_else( grepl("algoritmo", text, ignore.case = TRUE), 1 , 0),
+    colec = if_else( grepl("colec", text, ignore.case = TRUE), 1 , 0) ) 
+x %>% group_by( topic_name ) %>% 
+  #summarise(n=sum(plataforma)) %>%
+  summarise(n=sum(algoritmo)) %>%
+  #summarise(n=sum(colec)) %>%
+  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
+  geom_col() +
+  theme_minimal() + 
+  coord_flip() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/plataforma.jpg",width=6,height = 7,units = "cm",dpi=300)
+ggsave(filename = "graficos/algoritmo.jpg",width=6,height = 7,units = "cm",dpi=300)
+rm(x)
+
+<!-- # TOPICO 10 y 15 : BIG DATA EN ELECCIONES -->
+
+x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score)
+x<-x %>% left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
+  mutate( 
+    Macri = if_else( grepl("macri", text, ignore.case = TRUE) ,  1 , 0),
+    Kirchner = if_else( grepl("kirchner", text, ignore.case = TRUE), 1 , 0),
+    Trump = if_else( grepl("trump", text, ignore.case = TRUE), 1 , 0),
+    Clinton = if_else( grepl("clinton", text, ignore.case = TRUE), 1 , 0),
+    Nix = if_else( grepl("nix", text, ignore.case = TRUE), 1 , 0),
+    Zuckerberg = if_else( grepl("zuckerberg", text, ignore.case = TRUE), 1 , 0)
+  )
+x <- x %>% group_by( topic_name ) %>% select(-(1:6)) %>% summarise_all(funs(sum)) %>% gather(key="actor",value="n",-topic_name)
+x
+x %>% ggplot(aes(x=reorder(topic_name,n),y=n,fill=actor)) + 
+  geom_col()+
+  theme_minimal() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.title = element_blank())+
+  coord_flip()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/politicos.jpg",width=12,height = 8,units = "cm",dpi=300)
+x %>% ggplot(aes(x=reorder(topic_name,n),y=n,fill=actor)) + 
+  geom_bar(position="fill", stat="identity")+
+  theme_minimal() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.title = element_blank())+
+  coord_flip()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/politicos2.jpg",width=12,height = 8,units = "cm",dpi=300)
+
+<!-- # MECKOCHART DE PERSONALIDADES -->
+
+x2<-x%>%inner_join(x %>% group_by(doc_id,topic_name) %>% select(-(1:6)) %>% summarize(Actores=sum(Macri,Kirchner,Trump,Clinton,Nix,Zuckerberg)))
+x2
+x2 <- x %>% inner_join(menciones)
+x2
+menciones<-x %>% group_by(topic_name)%>%summarize(Menciones=sum(Actores))
+menciones$xmax<-cumsum(menciones$Menciones)
+menciones$xmin<-menciones$xmax - menciones$Menciones
+menciones
+rm(x2)
+rm(menciones)
+rm(x)
+
+<!-- # TOPICO 18, 20, 22, 23 : BIG DATA EN BIZ -->
+
+x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
+  filter(! topic_id %in% topicos_desechados ) %>%
+  group_by(topic) %>%
+  top_n(200,wt = score) %>%
+  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
+  mutate( 
+    revolucion = if_else( grepl("revolucion", text, ignore.case = TRUE) ,  1 , 0),
+    cuarto = if_else( grepl("cuarto", text, ignore.case = TRUE), 1 , 0),
+    digital = if_else( grepl("digital", text, ignore.case = TRUE), 1 , 0) ) 
+
+x %>% group_by( topic_name ) %>% summarise(n=sum(revolucion)) %>%
+  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
+  geom_col() +
+  theme_minimal() + 
+  coord_flip() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank() ) + 
+  theme(legend.position="none") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  theme(axis.title.x=element_blank(),
+        axis.title.y=element_blank()) 
+ggsave(filename = "graficos/revolucion.jpg",width=6,height = 7,units = "cm",dpi=300)
+rm(x)
 
