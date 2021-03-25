@@ -1,0 +1,19 @@
+# Entorno {-}
+
+### Instalación de Lenguaje R  {-}
+
+R es un lenguaje de programación pensado para computación estadística, que se distribuye de forma libre y gratuita bajo licencia GNU, y que corre en distintas plataformas y sistemas operativos. 
+
+Para correr R es necesario instalar el **entorno que ejecuta el lenguaje**. 
+Para ello tenés que descargar la última versión desde alguna copia regional (o *mirror*) del [CRAN: El archivo oficial de R](https://cran.r-project.org/mirrors.html) como, por ejemplo, la que aloja la [Universidad Nacional de La Plata](http://mirror.fcaglp.unlp.edu.ar/CRAN/), en Argentina.
+
+```{block, type='rmdcomment'}
+¿No estás acostumbrado a instalar programas y preferís ver el proceso antes de meter mano? [Video: Cómo Descargar e Instalar R y RStudio - 2020](https://www.youtube.com/watch?v=D9Bp11iZssc)
+```
+
+
+### Instalación de Interface RStudio  {-}
+
+Una vez que hayas descargado e instalado R, ya estarías en condiciones de introducir comandos en lenguaje R a través de la *consola*. No obstante, esto es muy rudimentario. 
+Para trabajar generalmente se utiliza un programa adicional, un entorno gráfico (o *IDE*) que facilita varias cosas, como la edición de código con coloreado y ayuda para autocompletado, organizar fácilmente los archivos, visualizar objetos en memoria, recurrir a la ayuda, etc. El entorno más usado es [RStudio, cuya versión de escritorio se puede descargar gratuitamente](https://rstudio.com/products/rstudio/download/#download). 
+Otra opción es usar el popular [Visual Studio Code con un plugin](https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r).

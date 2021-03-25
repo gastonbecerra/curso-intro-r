@@ -1,0 +1,359 @@
+# Preprocesar texto, cruzar tablas y usar funciones
+
+En este capítulo vamos a intentar explorar **¿Cuál es la valoración acerca del big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data". 
+
+A lo largo de este ejercicio veremos:
+
+1. cómo pre-procesar texto para su posterior análisis;
+2. cómo cruzar tablas (en nuestro caso, oraciones y diccionarios);
+3. cómo buscar e instalar librerías específicas y preparar los datos para su utilización.
+
+Particularmente nos introduciremos en una rama particular del procesamiento del lenguaje natural (NLP), que busca determinar si una oración afirma algo positivo o negativo acerca de un objeto que nos interesa, generalmente conocida como *opinion/ sentiment analysis*. 
+
+Generalmente se acepta que hay 2 métodos para este tipo de análisis: 
+
+1. un enfoque basado en "lexicos" o "lexicones" (diccionarios que incluyen para cada palabra una valoración en alguna dimensión afectiva, como el agrado), y que consiste en calcular la valoración media del texto que nos interesa, a partir de pesar aquellas palabras que están en los lexicones;
+2. un enfoque basado en clasificación / aprendizaje automático, que busca inferir reglas para establecer la polaridad de una oración a partir de estudiar un dataset de oraciones previamente clasificadas (por un humano). 
+
+En este capítulos nos centraremos en el primer enfoque (lexicones), dejando el aprendizaje para un capítulo posterior. 
+
+Buscaremos implementar esto de dos maneras: 
+
+1. en primer lugar, cruzando la tabla de oraciones con el lexicon, y haciendo nosotros alguna evaluación; 
+2. en segundo lugar, con una librería que contemple las falencias de nuestro primer enfoque.
+
+## Cruce manual 
+
+### Cargar datos y recursos
+
+En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse` para manipular y visualizar. También vamos a importar los datos con la función `read_csv()` de la librería `readr`. 
+
+<!-- 2do: definir fuente de datos -->
+<!-- 2do: armar una base de 100 oraciones bien claras positivo/negativo -->
+<!-- 2do: https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_bd.csv -->
+
+```{r echo=TRUE, message=TRUE, warning=FALSE}
+library(readr) # vamos a cargar las librerias
+library(tidyverse) 
+
+oraciones <- readr::read_csv(file = "data/oraciones_bd3.csv") # importamos
+glimpse(oraciones) # miramos la estructura de la base
+```
+
+### Pre-procesamiento de texto
+
+Para poder completar nuestros análisis primeros realizaremos varias tareas de preprocesamiento:
+
+1. Haremos un análisis gramatical para determinar los distintos componentes de la oración;
+2. Reduciremos las palabras a sus *lemmas*, formas básicas de las palabras, sin género ni conjugación;
+3. Descartaremos algunas palabras, quedándonos sólo con las más importantes para determinar la valoración.
+
+Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano.
+
+Lo primero que debemos hacer es instalar la librería. Luego, deberemos descargar el modelo del idioma que nos interesa. 
+
+```{r, eval=F, echo=T}
+install.packages("udpipe")
+modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia en un objeto modelo_sp$file_model
+```
+
+O si ya lo tenemos descargado, es conveniente referenciarlo:
+
+```{r, eval=T, echo=T}
+library(udpipe)
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+```
+
+Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y *anotar* qué tipo de componente es cada palabra, además de lemmatizarlas.
+
+```{r eval=F, echo=T}
+
+oraciones_anotadas <- udpipe_annotate( 
+  object = modelo_sp, # el modelo de idioma
+  x = oraciones$oracion, # el texto a anotar, 
+  doc_id = oraciones$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 250
+  ) %>% as.data.frame(.) # convertimos el resultado en data frame
+
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+
+# guardamos el parseado
+# glimpse(oraciones_anotadas)
+# readr::write_csv(x = oraciones_anotadas, file = "data/oraciones_anotadas.csv")
+
+# tomamos el parseado
+oraciones_anotadas <- readr::read_csv(file = "data/oraciones_anotadas.csv")
+
+```
+
+Vamos a examinar la tabla con las oraciones parseadas:
+
+```{r}
+glimpse(oraciones_anotadas)
+```
+
+Las siguientes variables nos interesan para preparar los datos para el análisis:
+
+* `doc_id`: dado que la tabla es "larga", y tiene 1 fila por cada palabra de cada oración, el doc_id nos permitirá volver a unir las piezas cuando hagamos tareas por oraciones; 
+* `lemma`: incluye la forma lemmatizada de la palabra, sin género, en singular, y sin conjugación, y la vuelve minúscula (e.g., "es" se vuelve "ser", y "Datos" se conviernete en "dato");
+* `upos`: nos permite aclarar qué tipo de palabra es;
+
+También notemos que la anotación convirtió la columna `doc_id` en una columna de texto. Conviene que corrijamos esto:
+
+```{r}
+oraciones_anotadas <- oraciones_anotadas %>% mutate(doc_id=as.integer(doc_id))
+```
+
+
+<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
+
+Aquí empiezan las decisiones que afectarán la calidad de los análisis, en relación al tipo de resultados que busquemos.
+
+Nuestra primera decisión es aprovechar la información de `upos` para quedaremos con las palabras que probablemente tengan mayor peso para conferir una orientación positiva o negativa: adjetivos, verbos, sustantivos y adverbios.
+
+Además, filtraremos la palabra "bigdata" ya que es esta justamente la que queremos definir por su contexto.
+
+(También seleccionaremos algunas columnas para trabajar, pero esto solamente por comodidad).
+
+```{r}
+oraciones_anotadas2 <- oraciones_anotadas %>% 
+  #select( doc_id, lemma, upos ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
+  filter(lemma != "bigdata")
+glimpse(oraciones_anotadas2)
+```
+
+Es interesante señalar que pasamos de `r nrow(oraciones_anotadas)` palabras parseadas y anotadas, a solo `r nrow(oraciones_anotadas2)`, que son con las que trabajaremos.
+
+### Cruzamos tablas (lexicones)
+
+Ahora podemos cruzar los lemmas de nuestras oraciones con los lexicones, para calcular la orientación de cada oración que incluye big data.
+
+<!-- 2do: simplificar en 1 solo lexicon -->
+
+Vamos a trabajar con 1 lexicón construido a partir de otros dos:
+
+1. *Spanish Dictionary Affect Language* (`sdal`), desarrollado por @Gravano2014, que replica el modelo de @Whissell2009. Este es un lexicon formado por 2700+ términos, clasificados manualmente en tres dimensiones afectivas, de las cuales aquí utilizamos el agrado.
+2. *Lexicon de evocaciones a big data* (`evoc`), desarrollado por @Becerra2020 en el marco de una investigación sobre las representaciones sociales del big data con la técnica de la evocación libre de palabras, a la que se añadió la posibilidad de aclarar la valoración del término incluído. Este es un lexicon formado por 1500+ términos. 
+
+Para unir estos lexicones tuvimos que lemmatizar los términos, escalar las valoraciones dentro del rango -1 y 1, eliminamos ambigüedades calculando la media. 
+
+```{r eval=FALSE, include=FALSE}
+# mergeo los lexicones
+evoc <- readr::read_csv("./data/lexicon2021.csv") %>%
+  select(-X1, -f)%>%
+  filter(!is.na(lemma)) %>% 
+  filter(lemma!="bigdata") %>% mutate(v=((v/10)*2)-1) # llevar a -1|1
+sdal <- readxl::read_excel("./data/sdal.xlsx") %>%
+  mutate(lemma = str_extract(pattern = "[^_]+", string = palabra)) %>% 
+  group_by(lemma) %>%
+  summarise(v=mean(as.numeric(agrado))) %>% 
+  mutate(v=((v/3)*2)-1) # llevar a -1|1
+lexicones <- rbind(
+    sdal %>% select(lemma,v) ,
+    evoc %>% select(lemma,v) 
+    ) %>% 
+  group_by( lemma ) %>% summarise(v=mean(v))
+rm(evoc,sdal)
+readr::write_csv(lexicones, 'data/lexicones.csv')
+```
+
+```{r}
+lexicones <- readr::read_csv('data/lexicones.csv')
+summary(lexicones)
+```
+
+Ahora sí: vamos a cruzar tablas! Particularmente, nos interesa ver si los lemmas que extrajimos de nuestras oraciones coinciden con los lemmas en los lexicones. 
+En cuyo caso, vamos a anotar la media de las valoraciones de estos lexicones, junto con la cantidad de lemmas que tomamos de cada oracion (para saber cuantos lemmas con valoraciones hay en la oracion), entre otros indicadores que podamos usar para evaluar y filtrar resultados.
+
+Para cruzar tablas usaremos los verbos `_join`, o más específicamente, `left_join` que mantiene todas las filas de nuestra tabla, agregandole las columnas con los valores de otra. Para hacer el cruce de tablas, `_join` utiliza las columnas de nombre coincidente (aunque podés especificar los pares con `by = c("x"="y")`). Esta es una opción de unión entre otras: `left_join`, `inner_join`, `anti_join`.
+[Tomado de https://es.r4ds.hadley.nz/datos-relacionales.html](images/join-venn.svg)
+
+```{r}
+oraciones_lexicones <- oraciones_anotadas2 %>% 
+  select(doc_id, lemma) %>% 
+  mutate(doc_id=as.integer(doc_id)) %>%
+  left_join(lexicones, by="lemma") %>% # cruzamos con el lexicon sobre los registros de nuestra tabla
+  group_by(doc_id) %>% # ahora vamos a calcular valores por oración
+  summarise(
+    valor=mean(v, na.rm = TRUE), # valoración media
+    cruzadas_n=length(v[!is.na(v)]), # cantidad de palabras con valoracion
+    cruzadas_lemmas=paste(lemma[!is.na(v)], collapse = " ") # palabras con valoracion
+  ) 
+
+glimpse(oraciones_lexicones)
+summary(oraciones_lexicones)
+```
+
+Exploremos un poco estos resultados. Busquemos oraciones con las valoraciones más altas y más bajas. 
+Para poder comprender mejor lo que estamos evaluando, volvamos a incluir las oraciones, previas a nuestro preprocesamiento.
+
+```{r message=FALSE}
+oraciones_lexicones %>%
+  slice_max(order_by = valor, n = 10) %>%
+  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  head(8)
+
+oraciones_lexicones %>%
+  slice_min(order_by = valor, n = 10) %>%
+  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  head(8)
+```
+
+Evaluemos los resultados y tomemos decisiones: ¿Nos resultan satisfactorios, considerando nuestros objetivos y el uso que daremos a estos datos posteriormente? ¿Queremos introducir reglas ad-hoc para mejorar estos resultados? ¿Cuántos casos se pierden por introducir reglas? ¿Cuán arbitrario se vuelve nuestro modelo?
+
+Estamos otra vez en el momento iterativo de la exploración. Volvamos a probar introduciendo un mínimo de palabras con valoración por oración...
+
+```{r message=FALSE}
+oraciones_lexicones %>%
+  filter(cruzadas_n>2) %>%
+  slice_max(order_by = valor, n = 10) %>%
+  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  head(8)
+
+oraciones_lexicones %>%
+  filter(cruzadas_n>2) %>%
+  slice_min(order_by = valor, n = 10) %>%
+  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  head(8)
+```
+
+Estos resultados parecen ser un poco mejores, aunque esta evaluación dependerá mucho del uso que querramos darle luego. Recordemos que el dato es un momento en un proceso...
+
+Ahora que podemos intuir los límites y potenciales de este tipo de procesamiento del lenguaje, vamos a volver a realizar estos análisis, con un procedimiento mucho más robusto, utilizando funciones de librerías o packages. 
+
+## Uso de packages
+
+En lo que sigue vamos a realizar *sentiment analysis* utilizando packages, particularmente con `txt_sentiment` del package `Udpipe` que ya usamos para anotar las oraciones.
+
+Los pasos generales cuando quieras trabajar con funciones de packages son:
+
+1. consultar la documentación;
+2. preprocesar los datos y transformar los objetos;
+3. usar la función y evaluar los resultados;
+
+Primero, vamos a consultar la documentación del package para conocer qué funciones podemos ejecturar. 
+Un buen punto de entrada es consultar la vignette, generalmente una suerte de introducción rápida del pack. 
+
+```{r eval=FALSE}
+browseVignettes("udpipe")
+```
+
+Otra opción es ir directamente a la documentación de la función, en la que encontraremos una descripción de los parámetros y ejemplos:
+
+```{r eval=FALSE}
+?udpipe::txt_sentiment
+```
+
+Veamos qué debemos especificar en esta función:
+
+<!-- 2do: probar constrain en esta funcion! -->
+
+* `x` es el dataframe que devuelve el preprocesamiento con udpipe;
+* `term` es el nombre de la columna (dentro de `x`) que contiene las oraciones a analizar;
+* `polarity_terms` es un dataframe que contiene 2 columnas: términos (`terms`) y polaridad (`polarity`), que puede ser de 1 o -1.
+* `polarity_negators` , `polarity_amplifiers`, `polarity_deamplifiers` son vectores de palabras que niegan, aumentan o reducen la orientación de las palabras (por ejemplo, si tenemos "bueno" en el lexicon con una valoración de 1, y "muy" dentro de los amplifiers, "muy bueno" podría suponer una valoración más alta que la dada por el lexicon, con un factor que se explicita en `amplifier_weight`). La ventana de palabras en las que se buscan estas palabras se configura con `n_before` y `n_after`.
+
+Vamos a preparar los datos para cumplir estos parámetros:
+
+```{r}
+# preparamos el lexicon para que los términos tengan 2 valores: 1 positivas y -1 negativas
+polarity_terms <- lexicones %>%
+  mutate(polarity = if_else(v>0,1,-1)) %>%
+  select(term=lemma, polarity)
+
+# preparamos los términos que modifican pesos
+polarity_negators <- c("no","nunca","nadie")
+polarity_amplifiers <- c("muy", "mucho", "mas")
+polarity_deamplifiers <- c("poco", "casi", "alguno", "menos")
+```
+
+Recordemos que tenemos las oraciones ya preprocesadas con `udpipe` en `oraciones_anotadas2`.
+
+Todo listo! Corremos la función y vemos el objeto resultante.
+
+```{r}
+oraciones_txt_sentiment <- txt_sentiment(
+  x = oraciones_anotadas2,
+  term = "lemma",
+  polarity_terms = polarity_terms,
+  polarity_negators = polarity_negators,
+  polarity_amplifiers = polarity_amplifiers,
+  polarity_deamplifiers = polarity_deamplifiers)
+
+glimpse(oraciones_txt_sentiment)
+```
+
+Este tipo de objetos son muy comunes en los objetos que devuelven las funciones y modelos. Se trata de una lista: un objeto que aloja otros objetos, como por ejemplo, un dataframe y un vector. Accedemos a estos elementos con el operador `$`.
+
+En el caso del objeto devuelto por `txt_sentiment`, hay 2 objetos que podemos consultar
+
+* `oraciones_txt_sentiment$data` que tiene la tabla resultante del cruce de las oraciones anotadas (recordemos: 1 fila x lemma) con los diccionarios y modificadores, dando un valor final `oraciones_txt_sentiment$data$sentiment_polarity`;
+* `oraciones_txt_sentiment$overall` que tiene la tabla con los valores a nivel oración, incluyendo la polaridad en `oraciones_txt_sentiment$overall$sentiment_polarity`;
+
+Veamos este último objeto, para evaluar los resultados:
+
+```{r}
+oraciones_txt_sentiment$overall %>% 
+  slice_max(order_by = sentiment_polarity, n=10) %>%
+  left_join(oraciones, by=c("doc_id"="id"))
+
+oraciones_txt_sentiment$overall %>% 
+  slice_min(order_by = sentiment_polarity, n=10) %>%
+  left_join(oraciones, by=c("doc_id"="id"))
+```
+
+`txt_sentiment` suma los scores de las palabras por oración, lo que hace esperable que las oraciones más largas muestren una polaridad más extrema. 
+
+<!-- 2do: esto se puede corregir? hay una opcion de restrain en algun lado -->
+
+<!-- ### sentimentR de sentimentr -->
+
+<!-- Finalmente, probemos `sentimentr`. -->
+
+<!-- ```{r} -->
+<!-- #install.packages("sentimentr") # instalamos si no lo tenemos -->
+<!-- library("sentimentr") -->
+<!-- ``` -->
+
+
+<!-- De vuelta, vamos a consultar la documentación del package para conocer qué funciones podemos ejecturar.  -->
+<!-- Dado que no hay vignette y que sabemos que la función que nos importa es `sentiment`, podemos ir directo a la referencia.  -->
+
+<!-- ```{r eval=FALSE} -->
+<!-- ?sentimentr::sentiment -->
+<!-- ``` -->
+
+<!-- Veamos qué debemos especificar en esta función: -->
+
+<!-- * `text.var` es el vector de oraciones a clasificar, procesado con `get_sentences()`; -->
+<!-- * `polarity_dt` es un data.table que contiene 2 columnas: términos y polaridad, que debe ser procesado con `as_key()`; -->
+<!-- * `valence_shifters_dt` un data.table con 2 columnas: `x` con el término , `y` con el tipo de modificador: 1 = negadores, 2 = amplificador, 3 = amplificadores, y 4 = conjunciones adversativas. -->
+
+<!-- Vamos a preparar los datos para cumplir estos parámetros: -->
+
+<!-- ```{r echo=TRUE} -->
+<!-- sentr_oraciones <- get_sentences(oraciones$oracion) -->
+<!-- sentr_key <- lexicones %>% select(words=lemma , polarity=v)  %>% as_key() -->
+<!-- sentr_valence <- data.frame( -->
+<!--   rbind( -->
+<!--     cbind(c("no","nunca","nadie"),1), -->
+<!--     cbind(c("muy","mas"),2), -->
+<!--     cbind(c("casi","alguno","menos"),3) -->
+<!--     ) -->
+<!-- ) %>% select(x=1,y=2) -->
+<!-- ``` -->
+
+<!-- Veamos resultados: -->
+
+<!-- ```{r eval=FALSE, include=FALSE} -->
+
+<!-- sentr_result <- sentiment( -->
+<!--   text.var = sentr_oraciones,  -->
+<!--   polarity_dt = sentr_key -->
+<!--   ) -->
+<!-- glimpse(sentr_result) -->
+<!-- ``` -->
+

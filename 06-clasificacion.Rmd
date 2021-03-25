@@ -1,0 +1,320 @@
+# Clasificar automáticamente a partir de otros datos
+
+En este capítulo vamos a intentar explorar **¿Cuál es la valoración sobre big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data", y que fueron anotados a mano, clasificando entre sentidos positivos y negativos.
+
+APRENDIZAJE SUPERVISADO
+
+1. pre-procesarlo y explorarlo
+2. armar un vectorizado
+3. dividir en training / test
+4. armar el modelo
+5. evaluar el modelo
+6. ajustar el modelo
+
+## Preprocesamiento
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(stringr)
+library(caret)
+library(tm)
+
+oraciones <- readr::read_csv("./data/oraciones_entrenar.csv")
+glimpse(oraciones)
+table(oraciones$target)
+
+set.seed(100)
+
+```
+
+es un dataset desbalanceado
+
+
+ahora la tokenizacion y la limpieza
+
+```{r}
+# unnest tokens y filtrar mugre
+
+# or_tokens <- oraciones %>%
+#         unnest_tokens(output = word, input = oracion) %>%
+#         filter(!str_detect(word, "^[0-9]*$")) %>%
+#         anti_join( tm::stopwords(kind="es") %>% as.data.frame() %>% select(word=1) ) %>%
+#         mutate(word = SnowballC::wordStem(word))
+
+library(udpipe)
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+oraciones_anotadas <- udpipe_annotate( 
+  object = modelo_sp, # el modelo de idioma
+  x = oraciones$oracion, # el texto a anotar, 
+  doc_id = oraciones$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 250
+  ) %>% as.data.frame(.) # convertimos el resultado en data frame
+
+oraciones_anotadas2 <- oraciones_anotadas %>% 
+  #select( doc_id, lemma, upos ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
+  filter(lemma != "bigdata")
+glimpse(oraciones_anotadas2)
+
+```
+
+falta lemmatizar
+
+## armado del vector
+
+```{r}
+# crea dtm (matrix)
+
+# or_dtm <- or_tokens %>%
+#         count(id, word) %>%
+#         cast_dtm(document = id, term = word, value = n)
+
+or_dtm <- oraciones_anotadas2 %>%
+        count(doc_id, lemma) %>%
+        cast_dtm(document = doc_id, term = lemma, value = n)
+
+# opcion b: usar inverse idf
+# cast_dtm(document = id, term = word, value = n, weighting = tm::weightTfIdf)
+
+# ajustamos la cantidad de features 
+# (regulando la sparcity de los datos)
+
+or_dtm
+or_dtm <- removeSparseTerms(or_dtm, sparse = .99)
+or_dtm
+
+# or_dtm$target = oraciones$target # sumamos la Y al vector
+
+```
+
+## division
+
+```{r}
+
+# preparamos la tabla como le gusta a caTools
+or_dtm2 = as.data.frame(as.matrix(or_dtm))
+colnames(or_dtm2) = make.names(colnames(or_dtm2))
+or_dtm2$target = oraciones$estado
+prop.table(table(or_dtm2$target)) 
+
+# dividimos
+library(caTools)
+division = sample.split(or_dtm2$target, SplitRatio = 0.7)
+or_train = subset(or_dtm2, division==TRUE)
+or_test = subset(or_dtm2, division==FALSE)
+
+# volvemos a incluir Y
+or_train$target = as.factor(or_train$target)
+or_test$target = as.factor(or_test$target)
+
+```
+
+## modelado
+
+### random forest
+
+```{r}
+confu <- function(Y_de_test, prediccion) {
+
+  table_mat <- table(Y_de_test, prediccion)
+  print(table_mat)
+  return (sum(diag(table_mat)) / sum(table_mat))
+
+}
+```
+
+
+```{r fig.height=5, fig.width=20}
+
+library(randomForest)
+or_rf = randomForest(target ~ ., data=or_train)
+or_rf_predict = predict(or_rf, newdata=or_test)
+confu(Y_de_test = or_test$target, prediccion = or_rf_predict )
+
+```
+
+aca plantear la falta de sensibilidad de la clase negativa 
+
+mas tarde viene oversampleado
+
+### otro modelo (con visualizacion)
+
+```{r}
+# rpart --------------------------
+
+# https://www.guru99.com/r-decision-trees.html#3
+
+library(rpart)
+library(rpart.plot)
+or_rpart <- rpart(target~., data = or_train, method = 'class')
+
+# para visualizarlo 
+
+or_rpart$variable.importance # variables mas explicativas
+rpart.plot(or_rpart, extra=106) # plot
+
+## mete pareametro para un plot mas largo
+# control <- rpart.control(minsplit = 4,
+#                          minbucket = round(5 / 3),
+#                          maxdepth = 10,
+#                          cp = 0)
+# fit <- rpart(target~., data = trainSparse, method = 'class', control=control)
+# rpart.plot(fit, extra=106)
+
+or_rpart_predict <-predict(or_rpart, or_test, type = 'class')
+confu(Y_de_test = or_test$target, prediccion = or_rpart_predict)
+
+# treehtr -----------------------
+
+# https://cran.r-project.org/web/packages/treeheatr/vignettes/explore.html
+
+# or_dtm <- removeSparseTerms(or_dtm, sparse = .97)
+# or_dtm_df <- as.data.frame(as.matrix( or_dtm ), stringsAsFactors=False)
+# or_dtm_df$target <- oraciones$target
+#         
+# library(treeheatr)
+# heat_tree(or_dtm_df, target_lab = 'target')
+
+
+```
+
+### bayes
+
+```{r}
+library(e1071) 
+or_bayes <- naiveBayes(target ~ ., data = or_train) 
+or_bayes_predict <- predict(or_bayes, newdata = or_test)
+confu(Y_de_test = or_test$target, prediccion = or_bayes_predict)
+```
+
+### svm
+
+```{r}
+library(e1071)
+or_svm = svm(formula = target ~ .,
+                 data = or_train,
+                 type = 'C-classification',
+                 kernel = 'linear')
+or_svm_predict <- predict(or_svm, newdata = or_test)
+confu(Y_de_test = or_test$target, prediccion = or_svm_predict)
+```
+
+## ajustar modelo
+
+### over / sub sampling
+
+```{r}
+
+
+# oversamplig ---------------------------
+
+
+library(ROSE)
+
+or_dmt_over <- ovun.sample(target~., data=or_dtm2,
+                 N=800, p=0.5, 
+                 method="both")$data
+
+table(or_dmt_over$target) # vemos como aumento
+
+# volvemos a hacer la división
+
+# preparamos la tabla como le gusta a caTools
+or_dmt_over = as.data.frame(as.matrix(or_dmt_over))
+colnames(or_dmt_over) = make.names(colnames(or_dmt_over))
+
+# dividimos
+division_over = sample.split(or_dmt_over$target, SplitRatio = 0.7)
+or_train_over = subset(or_dmt_over, division_over==TRUE)
+or_test_over = subset(or_dmt_over, division_over==FALSE)
+# glimpse(or_test_over)
+
+# vuelvo a poner el targe como factor
+or_train_over$target = as.factor(or_train_over$target)
+or_train_over$target = as.factor(or_train_over$target)
+
+or_rf_over = randomForest(target ~ ., data=or_train_over)
+or_rf_predict_over = predict(or_rf_over, newdata=or_test_over)
+confu(Y_de_test = or_test_over$target, prediccion = or_rf_predict_over )
+
+```
+
+## predecir sobre nuevos casos
+
+```{r eval=FALSE, include=FALSE}
+or_nuevas <- jsonlite::fromJSON(txt = 'data/fraser6-d10a4-default-rtdb-export2.json', 
+                                flatten = TRUE, 
+                                simplifyMatrix = TRUE)$oraciones %>%
+  mutate(id=as.integer(id)) %>% filter(!is.na(id), id != "", id > 1118, id < 1241) %>%
+  filter(estado %in% c("negativo","positivo"))
+
+table(or_nuevas$estado)
+
+or_nuevas %>% readr::write_csv("data/oraciones_nuevas.csv")
+
+```
+
+```{r}
+
+# predict
+# mostrar los predicciones, y ver a humano
+
+```
+
+
+```{r}
+# chupar 10 nuevos casos
+or_nuevas <- readr::read_csv(file = "data/oraciones_nuevas.csv") %>% mutate(id=1:n()) 
+
+glimpse(or_nuevas)
+
+# limpiar y vectorizar a 300 variables 
+# unnest tokens y filtrar mugre
+# or_nuevas_tokens <- or_nuevas %>%
+#         unnest_tokens(output = word, input = oracion) %>%
+#         filter(!str_detect(word, "^[0-9]*$")) %>%
+#         anti_join( tm::stopwords(kind="es") %>% as.data.frame() %>% select(word=1) ) %>%
+#         mutate(word = SnowballC::wordStem(word))
+# 
+# or_nuevas_dtm <- or_nuevas_tokens %>%
+#         count(id, word) %>%
+#         cast_dtm(document = id, term = word, value = n)
+
+oraciones_nuevas_tokens <- udpipe_annotate( 
+  object = modelo_sp, # el modelo de idioma
+  x = or_nuevas$oracion, # el texto a anotar, 
+  doc_id = or_nuevas$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 10
+  ) %>% as.data.frame(.) %>%
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
+  filter(lemma != "bigdata")
+
+or_nuevas_dtm <- oraciones_nuevas_tokens %>%
+        count(doc_id, lemma) %>%
+        cast_dtm(document = doc_id, term = lemma, value = n)
+
+or_nuevas_dtm # no le bajamos la sparsity porque ya tiene poco vocabulario?
+
+or_nuevas_dtm2 = (as.data.frame(as.matrix(or_nuevas_dtm)))
+colnames(or_nuevas_dtm2) = make.names(colnames(or_nuevas_dtm2))
+
+# agrandar nuestro vocabulario incluyendo palabras con 0 que estaban en el modelo viejo
+# el vocabulario nuevo no es considerado
+
+columnas_nuevas <- setdiff(colnames(or_dtm2) , colnames(or_nuevas_dtm2))
+tabla_vacia <- rep(0,times=length(columnas_nuevas)) %>% as.matrix() %>% t()
+colnames(tabla_vacia) <- columnas_nuevas
+
+or_nuevas_dtm3 <- cbind(or_nuevas_dtm2, tabla_vacia)
+
+or_nuevas_rf_predict_over = predict(or_rf_over, newdata=or_nuevas_dtm3)
+
+table(or_nuevas_rf_predict_over)
+
+or_nuevas[or_nuevas_rf_predict_over=="negativo",]$oracion
+or_nuevas[or_nuevas_rf_predict_over=="positivo",]$oracion
+
+```
+
+#

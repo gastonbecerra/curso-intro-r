@@ -1,0 +1,69 @@
+--- 
+title: "Introducción a la ciencia de datos con R."
+subtitle: "Una guía rápida para cientistas sociales."
+author: "Gastón Becerra y Juan Pablo López Alurralde"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+output: 
+  bookdown::gitbook
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+link-citations: yes
+github-repo: rstudio/bookdown-demo
+description: "Curso de R"
+---
+
+# Introducción {-}
+
+## Objetivos {-}
+
+Estos recursos corresponden a un curso que busca introducir a estudiantes de sociología y psicología, y otras disciplinas de las ciencias sociales y las humanidades, a un análisis del big data como un fenómeno tecnológico, social y cultural, con una visión ética, epistemológica y crítica. 
+
+Específicamente, aquí buscamos introducirnos al análisis de datos por medio del lenguaje R. Si bien este objetivo es explícitamente de nivel introductorio, creemos que puede ser un primer paso hacia un fin necesario: acercarnos al fenómeno de los datos, con una mirada *desde adentro*.
+
+Escenarios sociales y técnicos como el big data, así como los avances en inteligencia artificial y la proliferación de algoritmos en diversas esferas de la vida social, entre otros fenómenos, están transformando la realidad social. Los y las científicas sociales no podemos ser ajenos a estas transformaciones. Debemos involucrarnos y trabajar junto a ingenieros, programadores, estadísticos, y otros profesionales, para que la mirada crítica y reflexiva que hemos desarrollado en nuestra formación profesional pueda ser incorporada. Y también para repensar y reevaluar nuestra propias maneras de hacer ciencia, y así actualizar y revitalizar aquello que hace únicas a las disciplinas sociales y humanísticas[^1]. 
+
+[^1]: Basta recordar los interesantes desarrollos y debates que se originaron en sociología y psicología a partir del diálogo con otras disciplinas, como fueron los desarrollos vinculados a la complejidad y la cibernética en las décadas del ’70-90.
+
+## Contenidos {-}
+
+Los materiales y casos prácticos de los siguientes tutoriales se basan en fragmentos de nuestras propias investigaciones acerca del sentido social del big data[^2]. 
+
+remiten a diversas preguntas acerca del big data. Los datasets y algunos análisis se basan en fragmentos de nuestras investigaciones sobre el . Hemos optado por esta referencia a nuestros propios trabajos, esperando *abrir la cocina de la investigación* y tener la chance de discutir cómo las técnicas y los análisis que aquí presentamos pueden ser integrados en una investigación social, vinculando nuestras decisiones técnicas con sus objetivos.
+
+[^2]: Este programa de investigación se encuentra delineado en @Becerra2018 y @Becerra2018a.
+
+### Tutorial #1. Explorar, manipular y visualizar datos {-}
+
+En este tutorial aprenderemos **análisis exploratorio, manipulación de datos y construcción de gráficos**, para luego **construir nuestras propias funciones**. Esto nos permitirá *codear* los análisis necesarios para responder a la pregunta por los sentidos que se evocan al pensar en big data, siguiendo el "análisis prototípico" del enfoque estructural de la Teoría de las representaciones sociales de @Abric2001. Trabajaremos con un dataset construido a partir de una encuesta que incluía la técnica de asociación de palabras con respecto a "big data", entre otros términos (@Becerra2020).
+
+### Tutorial #2. Preprocesar texto y cruzar tablas {-}
+
+En este tutorial aprenderemos lo básico de **preprocesamiento de texto** para empezar a analizar el lenguaje natural, y a **cruzar tablas** para realizar un *análisis de sentimientos* con diccionarios/lexicones. Estas tareas nos permitirán empezar a explorar la polaridad que recubre al sentido social del big data, y que oscila entre una “gran oportunidad” en torno al conocimiento, y un "gran riesgo" por su explotación para el control y el condicionamiento de los grupos sociales.
+
+### Tutorial #3. Entrenamiento no-supervisado: Modelamiento de tópicos {-}
+
+En este tutorial veremos una técnica de entrenamiento no supervisado, denominada **topic modeling**, que nos permitirá explorar un dataset de noticias que incluyen el término "big data", buscando generar "temas" a partir de recurrencias en la distribución de palabras de los textos. 
+
+<!-- y veremos cómo analizar sus resultados en conjunto con nuestras interpretaciones -->
+<!-- (cuantitativos), tomando decisiones en base a nuestra interpretación (cualitativa) de los datos.  -->
+<!-- en conjunto con interpretaciones (cualitativas). Utilizaremos esta técnica para explorar la tematización del big data -su recorte, contextualización, - por parte de la prensa digital argentina. -->
+<!-- Esto nos permitirá discutir de qué manera ciertos patrones en el uso del lenguaje, sobre los que se construye un modelo, *podrían* ser indicativas de sentidos que exceden a la capacidad de cálculo de los algoritmos.  -->
+
+### Tutorial #4. Entrenamiento supervisado: Clasificación {-}
+
+En este tutorial veremos cómo **entrenar un modelo para clasificar texto**, particularmente, oraciones acerca del big data en positivas / negativas, a partir de otras oraciones ya clasificadas por humanos. Esta tarea retoma la pregunta planteada en el tutorial #2 por la polaridad del big data.
+
+## Otros recursos {-}
+
+Recomendamos (¡y mucho!) los siguientes recursos introductorios a la ciencia de datos y la programación en R, de licencia abierta, en castellano, y mayormente pensados para estudiantes de ciencias sociales:
+
+- [Ciencia de Datos para Gente Sociable
+](https://bitsandbricks.github.io/ciencia_de_datos_gente_sociable/) de Antonio Vazquez Brust (¡Excelente!)
+- [AnalizaR Datos Políticos](https://arcruz0.github.io/libroadp/index.html) de Francisco Urdinez y Andrés Cruz Labrín (Editores)
+- [RStudio para Estadística Descriptiva en Ciencias Sociales
+](https://bookdown.org/gboccardo/manual-ED-UCH/) de Giorgio Boccardo Bosoni y Felipe Ruiz Bruzzone
+- [R for Data Science (Español)](https://es.r4ds.hadley.nz/) Versión español del libro de Hadley Wickham y Garrett Grolemund.
+
+Además, te invitamos a que busques las comunidades de usuarios y usuarias de R mas cercanos a vos en el siguiente [mapa de Meetup](https://www.meetup.com/es/pro/r-user-groups/).
