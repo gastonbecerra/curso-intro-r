@@ -36,20 +36,18 @@ remiten a diversas preguntas acerca del big data. Los datasets y algunos anális
 
 ### Tutorial #1. Explorar, manipular y visualizar datos {-}
 
-En este tutorial aprenderemos **análisis exploratorio, manipulación de datos y construcción de gráficos**, para luego **construir nuestras propias funciones**. Esto nos permitirá *codear* los análisis necesarios para responder a la pregunta por los sentidos que se evocan al pensar en big data, siguiendo el "análisis prototípico" del enfoque estructural de la Teoría de las representaciones sociales de @Abric2001. Trabajaremos con un dataset construido a partir de una encuesta que incluía la técnica de asociación de palabras con respecto a "big data", entre otros términos (@Becerra2020).
+En este tutorial aprenderemos *análisis exploratorio, manipulación de datos y construcción de gráficos*, para luego *construir nuestras propias funciones*. Esto nos permitirá *codear* los análisis necesarios para responder a la pregunta por los sentidos que se evocan al pensar en big data. 
+Teórica y metodológicamente, aquí nos guiamos por el "análisis prototípico" del enfoque estructural de la Teoría de las representaciones sociales de @Abric2001. 
+Trabajaremos con un dataset construido a partir de una encuesta que incluía la técnica de asociación de palabras con respecto a "big data", entre otros términos [@Becerra2020].
 
 ### Tutorial #2. Preprocesar texto y cruzar tablas {-}
 
-En este tutorial aprenderemos lo básico de **preprocesamiento de texto** para empezar a analizar el lenguaje natural, y a **cruzar tablas** para realizar un *análisis de sentimientos* con diccionarios/lexicones. Estas tareas nos permitirán empezar a explorar la polaridad que recubre al sentido social del big data, y que oscila entre una “gran oportunidad” en torno al conocimiento, y un "gran riesgo" por su explotación para el control y el condicionamiento de los grupos sociales.
+En este tutorial aprenderemos lo básico de *preprocesamiento de texto* para empezar a analizar el lenguaje natural, y a *cruzar tablas* para realizar un *análisis de sentimientos* con diccionarios (lexicones). 
+Estas tareas nos permitirán empezar a explorar la polaridad que recubre al sentido social del big data, y que oscila entre una “gran oportunidad” en torno al conocimiento, y un "gran riesgo" por su explotación para el control y el condicionamiento de los grupos sociales.
 
-### Tutorial #3. Entrenamiento no-supervisado: Modelamiento de tópicos {-}
+### Tutorial #3. Entrenamiento no-supervisado: modelado de tópicos {-}
 
-En este tutorial veremos una técnica de entrenamiento no supervisado, denominada **topic modeling**, que nos permitirá explorar un dataset de noticias que incluyen el término "big data", buscando generar "temas" a partir de recurrencias en la distribución de palabras de los textos. 
-
-<!-- y veremos cómo analizar sus resultados en conjunto con nuestras interpretaciones -->
-<!-- (cuantitativos), tomando decisiones en base a nuestra interpretación (cualitativa) de los datos.  -->
-<!-- en conjunto con interpretaciones (cualitativas). Utilizaremos esta técnica para explorar la tematización del big data -su recorte, contextualización, - por parte de la prensa digital argentina. -->
-<!-- Esto nos permitirá discutir de qué manera ciertos patrones en el uso del lenguaje, sobre los que se construye un modelo, *podrían* ser indicativas de sentidos que exceden a la capacidad de cálculo de los algoritmos.  -->
+En este tutorial veremos una técnica de entrenamiento no supervisado, denominada *topic modeling* (o modelado de tópicos), que nos permitirá explorar un dataset de noticias digitales que incluyen el término "big data" [@Becerra2019], buscando generar "temas" a partir de la distribución de palabras de los textos. Nuestro objetivo es explorar posibles *framings* en la construcción mediática del big data. En vista de este objetivo, esta técnica debe articularse con análisis interpretativo manual por parte del investigador. Esto nos permitirá discutir de qué manera las decisiones técnicas que introducimos en nuestros códigos responden a los desafíos de diseños cualitativos [@Auerbach2003]. 
 
 ### Tutorial #4. Entrenamiento supervisado: Clasificación {-}
 

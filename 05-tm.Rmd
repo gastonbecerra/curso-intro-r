@@ -1,4 +1,4 @@
-# Modelamiento de tópicos
+# Modelado de tópicos
 
 En este capítulo vamos a intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. 
 
@@ -9,7 +9,7 @@ A lo largo de este ejercicio veremos:
 1. cómo pre-procesar texto para su posterior análisis;
 2. cómo construir tablas que crucen documento x términos;
 3. cómo modelar tópicos;
-3. cómo interpretar los tópicos.
+4. cómo interpretar los tópicos, leyendo los resultados junto con nuestro propio análisis cualitativo, entre otras indagaciones.
 
 ## Cargar datos y recursos
 
@@ -30,16 +30,16 @@ readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda") %>%
   saveRDS(file = "data/noticias_curso.rds")
 ```
 
-
 En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse` para XXX.
 
 <!-- 2do: librerias -->
-
 <!-- 2do: definir fuente de datos -->
 <!-- 2do: meter un id -->
 
 ```{r echo=TRUE, message=TRUE, warning=FALSE}
-library(tidyverse) 
+library(tidyverse) # para manipular en general
+library(tidytext) # para convertir los objetos a formatos requeridos / devueltos por LDA
+
 noticias <- readRDS(file = "data/noticias_curso.rds") %>% mutate(id=1:n())
 glimpse(noticias) # miramos la estructura de la base
 ```
@@ -48,7 +48,7 @@ glimpse(noticias) # miramos la estructura de la base
 
 Para poder completar nuestros análisis primeros realizaremos varias tareas de preprocesamiento:
 
-1. Haremos un análisis gramatical para determinar los distintos componentes de la oración;
+1. Haremos un análisis morfosintático para determinar los distintos componentes de la oración;
 2. Reduciremos las palabras a sus *lemmas*, formas básicas de las palabras, sin género ni conjugación;
 3. Descartaremos algunas palabras comunes, quedándonos sólo con las más significativas.
 
@@ -119,15 +119,18 @@ glimpse(noticias_anotadas2)
 ```
 
 
-## Sobre el modelo LDA
+## Modelado de tópicos con LDA
 
-Para construir los tópicos usaremos el modelo Latent Dirichlet Allocation (D. Blei, Ng, & Jordan, 2003), a través del pack `topicmodels` (Grün & Hornik, 2011). Este modelo genera *tópicos* proponiendo una cierta distribución de todas las palabras del corpus, y calcula la distribución de estos tópicos en cada documentos. 
+### Sobre el modelo LDA
 
-Lo interesante de esta manera de operativizar los temas, es que cada tópico puede ser entendido como un campo semántico, un conjunto de palabras que suelen correlacionar en distintos documentos. Luego, en el momento del análisis de estos resultados, buscaremos inferir un tema a partir de las palabras que más contribuyen a cada tópico. E.g., podríamos inferir de un tópico en el que contribuyen fuertemente los términos "venta", "producto" y "comprador", el tema "comercio". Según uno de los autores del modelo, la interpretabilidad de la mayoría de los temas es el resultado de “la estructura estadística del lenguaje y cómo interactúa con los supuestos probabilísticos específicos de LDA” (D. Blei, 2012, p. 79). 
+Para construir los tópicos usaremos el modelo Latent Dirichlet Allocation, a través del pack `topicmodels`. Este modelo genera *tópicos* proponiendo una cierta distribución de todas las palabras del corpus, y calcula la distribución de estos tópicos en cada documentos. 
+
+Lo interesante de esta manera de operativizar los temas, es que cada tópico puede ser entendido como un campo semántico, un conjunto de palabras que suelen correlacionar en distintos documentos. Luego, en el momento del análisis de estos resultados, buscaremos inferir un tema a partir de las palabras que más contribuyen a cada tópico. E.g., podríamos inferir de un tópico en el que contribuyen fuertemente los términos "venta", "producto" y "comprador" al tema "comercio".
+Según uno de los autores del modelo, la interpretabilidad de la mayoría de los temas es el resultado de “la estructura estadística del lenguaje y cómo interactúa con los supuestos probabilísticos específicos de LDA” (D. Blei, 2012, p. 79). 
 
 A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los tópicos con una "contribución" relativa. Esto es justamente lo que nos interesa ya queremos comparar distintas maneras de "contextualizar" al mismo término ("big data") a través de distintos tópicos, caracterizados por el uso de ciertas otras palabras. 
 
-## Aplicar LDA
+### Aplicar LDA
 
 Empezaremos calculando la distribución de palabras de cada documento. 
 
@@ -136,30 +139,33 @@ Empezaremos calculando la distribución de palabras de cada documento.
 Otro punto de partida podría ser calcular palabras significativas, calculando con un peso más bajo a aquellas palabras que aparecen en más documentos. Usaremos este segundo enfoque más adelante. 
 -->
 
-Luego, convertiremos esta tabla en un objeto `DocumentTermMatrix` del pack `tm`, utilizando la función `cast_dtm` de la librería `tidytext`.
+El objeto que necesitamos para construir el modelo es de tipo `DocumentTermMatrix` del pack `tm`, xxxx. 
+<!-- 2do: explicar la idea de un vector de palabras -->
+Podemos convertir nuestra tabla de distribución de palabras en este tipo de objeto utilizando la función `cast_dtm` de la librería `tidytext`.
 
 ```{r}
-library(tidytext)
 noticias_dtm <- noticias_anotadas2 %>%
   count(doc_id, lemma, sort = TRUE) %>%
   cast_dtm(doc_id, lemma, n)
 noticias_dtm
 ```
 
-Esto nos informa la cantidad de documentos y la cantidad de palabras distintas, y nos indica un % de palabras que aparecen 0 veces en un documento (Sparsity). 
+El objeto tipo `DocumentTermMatrix` nos informa la cantidad de documentos y la cantidad de palabras distintas, y nos indica un % de palabras que aparecen 0 veces en un documento (Sparsity). 
 
-Luego, vamos a construir el modelo con la función `LDA`. 
-Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
+Luego, vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
 
 ```{r eval=F, echo=T}
-k_topics <- 5 # numero de topicos
-noticias_tm <- topicmodels::LDA(noticias_dtm, k = k_topics, control = list(seed = 1234))
-noticias_tm
+k_topics <- 6 # numero de topicos
+noticias_tm <- topicmodels::LDA(noticias_dtm, k = k_topics, method = "Gibbs", control = list(seed = 1:3, nstart=3, verbose=1000))
 ```
 
 ```{r eval=T, echo=F}
 # saveRDS(noticias_tm, file = "data_ignore/noticias_tm.rds")
 noticias_tm <- readRDS(file = "data_ignore/noticias_tm.rds")
+```
+
+```{r}
+noticias_tm
 ```
 
 <!-- 2do: estuve hablando de distribuciones pero serian distribuciones probables -->
@@ -178,50 +184,78 @@ glimpse(noticias_tm_gamma)
 
 ## Interpretar el modelo
 
-### Inferir tópicos desde términos y documentos (análisis cualitativo)
+Los resultados arrojados por el modelo pueden ser útiles para inferir tópicos. No obstante, esto implica un proceso de interpretación cualitativo por parte del investigador, que comienza con el "etiquetado", y en el que se deben tomar varias decisiones metodológicas, así como atender a sus desafíos.
+Especialmente, el desafío de "transparentar" la parte humana de este análisis para asegurar la credibilidad de nuestras inferencias y decisiones, a la vez que permitir interpretaciones alternativas. 
 
-xxx
+Generalmente, el análisis de los tópicos supone varios momentos:
 
-```{r}
+1. etiquetado manual y organización de los tópicos;
+2. análisis cualitativo de los documentos;
+3. validación estadística y determinación de K;
+4. validación de metadatos contra supuestos;
+5. explorar relaciones entre tópicos;
+6. explorar relaciones y diferencias en los metadatos; 
+7. explorar relaciones y diferencias en los contenidos (usando lexicones).
+
+Al igual que en los diseños cualitativos debemos tener en consideración 2 cuestiones: (1) que las distintas tareas y momentos del análisis no son secuenciales sino más bien iterativos, y que constantemente iremos tomando decisiones que afectan (hacia adelante) y que informan (hacia atras) a otras decisiones; (2) que todas estas decisiones serán mas claras y robustas si son producto del consenso entre distintos analistas que trabajan en forma autónoma y que documentan e intercambian la razones de sus decisiones [@Auerbach2003].
+
+### Etiquetado manual y organización de los tópicos
+
+El etiquetado no es un proceso distinto al de la codificación cualitativa, es decir, a la interpretación interativa de ideas y expresiones repetidas y la imputación de un código o etiqueta que lo identifica. 
+
+En términos de *codeo*, preparar los datos para esta tarea es muy fácil: simplemente listamos los términos que más contribuyen a cada tópico.
+
+```{r fig.height=5, fig.width=6, message=FALSE, warning=FALSE}
 noticias_tm_beta %>% # principales términos en cada tópico
   group_by(topic) %>%
-  top_n(15, beta) %>%
+  top_n(15) %>%
   ungroup() %>%
   arrange(topic, -beta) %>% # vamos a mostrarlo como grafico
-  ggplot(aes(x=term,y=beta)) + 
+  ggplot(aes(x=reorder(term, (beta)),y=beta)) + 
     geom_col() +
-    facet_wrap(~topic, scales = "free") +
+    facet_wrap(~topic, scales = "free_y") +
   coord_flip()
 ```
 
-<!-- # UNA VEZ ANALIZADOS, PEGO LOS NOMBRES Y DESCARTO LOS QUE NO LES ENCONTRAMOS SENTIDO -->
+El objetivo del análisis que haremos (manualmente) sobre estos datos es el de evaluar si hay un campo coherente de palabras en cada tópico, para luego asignarle una etiqueta que lo describa. En tanto estas son todas inferencias nuestras, en el mejor de los casos, guidados por nuestro conocimiento teórico del fenómeno, nos ubicamos en el plano de las hipótesis. 
 
-topicos_nombres <- c("1. Social networks",
-                     "2. Biz. int.",
-                     "3. X",
-                     "4. Society",
-                     "5. X",
-                     "6. Politics (international)",
-                     "7. Politics (national)",
-                     "8. X",
-                     "9. Jobs",
-                     "10. Elections (national)",
-                     "11. X",
-                     "12. X",
-                     "13. Tourism / Urban",
-                     "14. Data",
-                     "15. Elections (international)",
-                     "16. IA",
-                     "17. Apps and platforms",
-                     "18. Investments",
-                     "19. Privacy",
-                     "20. eCommerce",
-                     "21. X",
-                     "22. Agro",
-                     "23. Education and science",
-                     "24. Health",
-                     "25. X")
-topicos_desechados <- c(3, 5, 8, 11, 12, 21, 25) # topicos que no les encuentro sentido
+Veamos esto con nuestros datos:
+
+* Tópico 1: sobresalen palabras como tecnología, sistema, mundo, inteligencia y artificial que nos permiten inferir el campo de las transformaciones tecnológicas recientes y sus proyecciones;
+* Tópico 2: dato, información, persona, usuario, red (social), nos remiten al proceso que teóricamente llamamos "datificación", al cual entendemos como el trasfondo social del big data [@VanDijck2014];
+* Tópico 3: equipo, historia, mundial, selección y jugador nos permiten inferir que se trata del deporte;
+* Tópico 4: campañana, gobierno, presidente, política, electoral remiten a elecciones políticas;
+* Tópico 5: red, series, sociedad, comunicación, dispositivo, si bien no permiten hipotetizar un tópico coherente, tal vez refieran a plataformas, apps o redes sociales;
+* Tópico 6: palabras como empresa, digital, negocio, y cliente, nos permiten inferir el campo semántico del comercio digital.
+
+Vamos a escribir estas 6 etiquetas en un array de nombres de tópicos, por si necesitamos incluirlos en futuros gráficos como etiquetas:
+
+```{r}
+topicos_nombres <- c("T1"="1. Transformaciones",
+                     "T2"="2. Datificacion",
+                     "T3"="3. Deporte",
+                     "T4"="4. Elecciones",
+                     "T5"="5. Plataformas",
+                     "T6"="6. Comercio")
+```
+
+Es importante tener en cuenta que no siempre todos los tópicos presentarán un campo semántico coherente: en muchos casos pueden referir a regularidades propias del tipo de comunicación que estamos analizando (e.g., palabras que remiten a una interacción por parte del usuario, si es que estamos trabajando con contenido tomado de páginas interactivas), o una mixtura de palabras tal que el lugar de permitirnos inferir un campo unívoco, nos resulte incoherente.
+
+Luego, debemos organizar nuestros tópicos:
+
+* **¿Descartamos tópicos irrelevantes?**: Más allá de los tópicos incoherentes o para los que un campo semántico no es tan evidente, podemos decidir filtrar otros tópicos en vistas de su (ir)relevancia para nuestra pregunta teórica. En nuestro caso, todos los tópicos (con excepción del #2) parecen ser temas más amplios en los que el big data juega un rol con peso social. El caso del #2 es tal vez distinto, ya que parece ser un tópico que trata focalmente sobre el big data antes que sobre otro fenómeno que lo incluye.
+
+* **¿Agrupar tópicos?**: Generalmente, en una codificación cualitativa, el proceso se repite iterativamente, haciendo inferencias cada vez más generales (mayor abstracción) y coordinadas (mayor coherencia), lo que nos permite pasar de los códigos a los temas y argumentos. El modelo LDA no tiene esa estructura jerárquica, pero nosotros podemos agrupar o colapsar tópicos en temáticas más generales. Esto es casi siempre necesario cuando trabajamos con un K elevado, o con otro algoritmo (como VEM). 
+
+### Análisis cualitativo de documentos
+
+Dados los objetivos de nuestra investigación -indagar las distintas maneras en que se tematiza al big data en la prensa-, no podemos quedarnos con estos resultados que, en el mejor de los casos, son una clasificación probable de los documentos. 
+Más bien, nos interesa hacer un *análisis de contenido* manual de algunos documentos que presenten estos tópicos [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación, teóricamente fundadas. 
+(Para el caso de nuestra investigación, se trata de describir cómo se introduce al big data en artículos periodísticos de distintos temas, especialmente, comparando las premisas y las promesas con las que se lo vincula. [@Becerra2019])
+
+En este momento sólo usaremos R para construir la muestra de documentos a analizar manualmente en otro entorno[^1]. 
+
+[^1]: Generalmente para estas tareas se puede utilizar otro software destinado al análisis cualitativo (CAQDAS), como atlas.ti o nvivo. Existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/).
 
 
 
@@ -277,6 +311,23 @@ topicos_documentos %>%
   write.table(file=paste0("noticias_links_topicos_",k_topics,"_topicos.txt") , row.names = FALSE , quote = FALSE , col.names = TRUE , sep = "|")
 
 
+### Validación estadística y determinación de K
+
+NO SON CONFIABLES, NO SE CORRESPONDEN CON HUMANOS
+
+5 Discussion
+We presented the first validation of the assumed coherence and relevance of topic models using human experiments. For three topic models, we demonstrated that traditional metrics do not capture whether topics are coherent or not. Traditional metrics are, indeed, negatively correlated with the measures of topic quality developed in this paper. Our measures enable new forms of model selection and suggest that practitioners developing topic models should thus focus on evaluations that depend on real-world task performance rather than optimizing likelihood-based measures.
+
+Chang, J., Boyd-Graber, J., Gerris, S., Wang, C., & Blei, D. (2009). Reading Tea Leaves: How Humans Interpret Topic Models. Neural Information Processing Systems.
+
+The quality of the model is assessed by computing its perplexity, i.e. a metric based on the probability of the documents held out for evaluation. Hyperparameter settings then can also be optimized according to highest held out likelihood (Wallach et al., 2009). Although likelihood evaluation is widely used due to its pure automatic nature, Chang et al. (2009) have proven with large user studies that optimal held out likelihood does not correspond to human perception of semantic coherence of topics.
+
+
+
+
+comparing measurements of semantic coherence of topics (see eq. 3.15) as an additional hint to identify overly broad or incoherent topics, and
+
+
 ### Comparar tópicos
 
 
@@ -308,6 +359,8 @@ rm(lqs, topic_scores_corr)
 
 
 ### Buscar variaciones en metadatos ()
+
+fecha: hay hechos relevantes?
 
 distribución por source
 
@@ -508,4 +561,3 @@ x %>% group_by( topic_name ) %>% summarise(n=sum(revolucion)) %>%
         axis.title.y=element_blank()) 
 ggsave(filename = "graficos/revolucion.jpg",width=6,height = 7,units = "cm",dpi=300)
 rm(x)
-
