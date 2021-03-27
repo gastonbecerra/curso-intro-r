@@ -235,11 +235,9 @@ Aclarada la estructura y el uso de una función, ya sólo resta pensar en cuále
 
 Como la idea es poder probar distintos criterios y decisiones, algunos de estos pasos suponen que podamos introducir algún parámetro: 
 (paso 2) vamos a introducir una frecuencia mínima;
-(paso 3) vamos a indicar si queremos usar la media o la mediana[^1] para calcular el criterio de corte, es decir si aplicamos `mean()` o `median()`, esta operación condicional la haremos con una estructura de control: `if( criterio ) { ... } else { ... }`.
+(paso 3) vamos a indicar si queremos usar la media o la mediana para calcular el criterio de corte, es decir si aplicamos `mean()` o `median()`, esta operación condicional la haremos con una estructura de control: `if( criterio ) { ... } else { ... }`.
 Estos 2 parámetros los vamos a incluir en la función, con un valor por defecto: `2` para la frecuencia mínima, y `media` para calcular el criterio.
 Vamos a utilizar el comando `message()` para que al correr la función se muestren estos parámetros, y también para observar la cantidad de palabras que quedan en cada segmento, dados estos parametros (paso 5).
-
-[^1]: De hecho podríamos usar una función más compleja, y generar 3+ segmentos.
 
 ```{r}
 analisis_proto <- function (tabla_evocaciones, frecuencia_minima = 2,  criterio_corte = "media") {

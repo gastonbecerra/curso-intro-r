@@ -62,33 +62,7 @@ glimpse(oraciones_anotadas2)
 
 falta lemmatizar
 
-## armado del vector
-
-Comúnmente, los modelos de *machine learning* son entrenados con datos estructurados en forma de tablas. Cuando trabajamos con texto debemos construir estas tablas a partir de las palabras de la oración, o del documento con el que estemos trabajando. Esto lo hacemos con el *vectorizado*.
-
-Supongamos que tenemos dos frases: "El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados” y "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1", que en su forma lemmatizada y filtrada serían "bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado" y "google analizar bigdata inferir ritmo contagio gripe h1n1".
- 
-Veamos cómo se vería estas oraciones vectorizadas:
-
-```{r eval=TRUE, echo=FALSE}
-data.frame(
-        Index = c(1L, 2L),
-      bigdata = c(1L, 1L),
-          ser = c(1L, 0L),
-     conjunto = c(1L, 0L),
-      tecnica = c(1L, 0L),
-       grande = c(1L, 0L),
-  corporacion = c(1L, 0L),
-     analizar = c(1L, 1L),
-    manipular = c(1L, 0L),
-      inferir = c(0L, 1L),
-         n... = c(NA, NA)
-)
-```
-
-Aquí hemos reducido cada oración a una "bolsa de palabras", que ha resignado el contexto de formulación de las expresiones verbales, perdiendo el orden. Nos quedamos entonces sólo con un vocabulario general que, para cada oración, anota la frecuencia de aparición con 1 y 0, es decir, con datos que son interpretables por una computadora y que nos pueden servir para entrenar un modelo de machine learning.
-
-Con R es muy fácil generar estos vectores y manipularlos.
+## vectorizado
 
 ```{r}
 # crea dtm (matrix)
@@ -343,5 +317,3 @@ or_nuevas[or_nuevas_rf_predict_over=="negativo",]$oracion
 or_nuevas[or_nuevas_rf_predict_over=="positivo",]$oracion
 
 ```
-
-#

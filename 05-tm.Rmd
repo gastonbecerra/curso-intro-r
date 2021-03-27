@@ -5,11 +5,11 @@ En este capítulo nos introduciremos a una técnica de aprendizaje no supervisad
 A lo largo de este ejercicio veremos:
 
 1. cómo pre-procesar texto para su posterior análisis;
-2. cómo construir tablas que crucen documento x términos;
+2. cómo construir vectores de documentos por términos;
 3. cómo modelar tópicos;
 4. cómo interpretar los tópicos, leyendo los resultados junto con nuestro propio análisis cualitativo, entre otras indagaciones.
 
-Vamos a utilizar esta técnica para intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. Nos interesa particularmente indagar de qué manera el big data es contextualizado, de modo tal que el modelado de tópicos pueden asistir al análisis de "frames" discursivos. Este tipo de análisis son útiles para investigar acerca de la construcción social de un fenómeno por parte de un sistema de comunicación, como es la prensa [@Jacoby2016].
+Vamos a utilizar esta técnica para intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. Nos interesa particularmente indagar de qué manera el big data es contextualizado, de modo tal que el modelado de tópicos pueden asistir al análisis de "frames" discursivos. Este tipo de análisis son útiles para investigar acerca de la construcción social de un fenómeno por parte de un sistema de comunicación, como es la prensa [@Jacobi2016].
 
 ## Pre-procesamiento de texto
 
@@ -81,6 +81,42 @@ noticias_anotadas2 <- noticias_anotadas %>%
 glimpse(noticias_anotadas2)
 ```
 
+## Vectorizado del texto
+
+Comúnmente, los modelos de *machine learning* son entrenados con datos estructurados en forma de tablas. Cuando trabajamos con texto debemos construir estas tablas a partir de las palabras del documento con el que estemos trabajando. Esto lo hacemos con el *vectorizado*.
+
+Supongamos que tenemos dos documentos con una oración cada uno: "El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados” y "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1", que en su forma lemmatizada y filtrada serían "bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado" y "google analizar bigdata inferir ritmo contagio gripe h1n1".
+ 
+Veamos cómo se vería estas oraciones vectorizadas:
+
+```{r eval=TRUE, echo=FALSE}
+data.frame(
+        Index = c(1L, 2L),
+      bigdata = c(1L, 1L),
+          ser = c(1L, 0L),
+     conjunto = c(1L, 0L),
+      tecnica = c(1L, 0L),
+       grande = c(1L, 0L),
+  corporacion = c(1L, 0L),
+     analizar = c(1L, 1L),
+    manipular = c(1L, 0L),
+      inferir = c(0L, 1L),
+         n... = c(NA, NA)
+)
+```
+
+Aquí hemos reducido cada oración a una "bolsa de palabras", que ha resignado el contexto de formulación de las expresiones verbales, perdiendo el orden. Nos quedamos entonces sólo con un vocabulario general que, para cada oración, anota la frecuencia de aparición con 1 y 0, es decir, con datos que son interpretables por una computadora y que nos pueden servir para entrenar un modelo de machine learning.
+
+con la función `count()` es muy fácil armar un vector, si usamos como inputs el id del documento y las palabras. Luego, podemos convertir nuestra tabla de distribución de palabras en este tipo de objeto utilizando la función `cast_dtm` de la librería `tidytext`.
+
+```{r}
+noticias_dtm <- noticias_anotadas2 %>%
+  count(doc_id, lemma, sort = TRUE) %>% # contamos palabras x documento
+  cast_dtm(doc_id, lemma, n) # convertimos a vector
+noticias_dtm
+```
+
+El objeto tipo `DocumentTermMatrix` nos informa la cantidad de documentos y la cantidad de palabras distintas, y nos indica un % de palabras que aparecen 0 veces en un documento (Sparsity). 
 
 ## Modelado de tópicos con LDA
 
@@ -95,27 +131,7 @@ A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los
 
 ### Aplicar LDA
 
-Empezaremos calculando la distribución de palabras de cada documento. 
-
-<!-- 
-2do: usar it_dft 
-Otro punto de partida podría ser calcular palabras significativas, calculando con un peso más bajo a aquellas palabras que aparecen en más documentos. Usaremos este segundo enfoque más adelante. 
--->
-
-El objeto que necesitamos para construir el modelo es de tipo `DocumentTermMatrix` del pack `tm`, xxxx. 
-<!-- 2do: explicar la idea de un vector de palabras -->
-Podemos convertir nuestra tabla de distribución de palabras en este tipo de objeto utilizando la función `cast_dtm` de la librería `tidytext`.
-
-```{r}
-noticias_dtm <- noticias_anotadas2 %>%
-  count(doc_id, lemma, sort = TRUE) %>%
-  cast_dtm(doc_id, lemma, n)
-noticias_dtm
-```
-
-El objeto tipo `DocumentTermMatrix` nos informa la cantidad de documentos y la cantidad de palabras distintas, y nos indica un % de palabras que aparecen 0 veces en un documento (Sparsity). 
-
-Luego, vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
+Vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
 
 ```{r eval=F, echo=T}
 k_topics <- 6 # numero de topicos
@@ -164,7 +180,7 @@ Al igual que en los diseños cualitativos debemos tener en consideración 2 cues
 
 En vistas de todas estas decisiones, @Bechmann2019 sugieren:
 
-    Seemingly unsupervised model becomes extremely supervised due to classification work such as setting number of topics, cleaning data in a particular way with an apriori understanding of "meaningful" clusters and interpreting clusters with parent classes manually. 
+> Seemingly unsupervised model becomes extremely supervised due to classification work such as setting number of topics, cleaning data in a particular way with an apriori understanding of "meaningful" clusters and interpreting clusters with parent classes manually. 
 
 ### Etiquetado manual y organización de los tópicos
 
@@ -220,9 +236,7 @@ Dados los objetivos de nuestra investigación -indagar las distintas maneras en 
 Más bien, nos interesa hacer un *análisis de contenido* manual de algunos documentos que presenten estos tópicos [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación, teóricamente fundadas. 
 (Para el caso de nuestra investigación, se trata de describir cómo se introduce al big data en artículos periodísticos de distintos temas, especialmente, comparando las premisas y las promesas con las que se lo vincula. [@Becerra2019])
 
-En este momento sólo usaremos R para construir la muestra de documentos a analizar manualmente en otro entorno[^1]. 
-
-[^1]: Generalmente para estas tareas se puede utilizar otro software destinado al análisis cualitativo (CAQDAS), como atlas.ti o nvivo. Existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/).
+En este momento sólo usaremos R para construir la muestra de documentos a analizar manualmente en otro entorno. Generalmente para estas tareas se puede utilizar otro software destinado al análisis cualitativo (CAQDAS), como atlas.ti o nvivo. Existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/).
 
 1. etiquetado manual y organización de los tópicos;
 2. análisis cualitativo de los documentos;

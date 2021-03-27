@@ -11,7 +11,7 @@ Particularmente, vamos a aprender a:
 Trabajaremos con un corpus de oraciones, extraídas de noticias argentinas que incluyen la palabra "big data". El objetivo de nuestro análisis será **determinar si el big data es valorado como un fenómeno positivo o negativo**, de acuerdo a la carga valorativa de las palabras que le dan contexto. 
 Esta tarea puede ser útil para comenzar a explorar el fenómeno de la polaridad del big data. Al respecto, luego de analizar noticias acerca de big data en diarios de Estados Unidos, Reino Unido y Australia, @Paganoni2019 sugiere: 
 
-    Big data appears to be framed between two poles—data and information as opposed to rights and privacy—whose gap has of late been emphasised by a number of data scandals affecting business, health and politics, and culminating in the major unforeseen event of Cambridge Analytica and Facebook.
+> Big data appears to be framed between two poles—data and information as opposed to rights and privacy—whose gap has of late been emphasised by a number of data scandals affecting business, health and politics, and culminating in the major unforeseen event of Cambridge Analytica and Facebook.
     
 ## Pre-procesamiento de texto
 
@@ -90,9 +90,7 @@ Esta anotación se ha encargado de muchas tareas típicas del pre-procesamiento 
 
 Podemos usar `upos` para filtrar palabras. Este paso es una alternativa a la eliminación de *stopwords* y palabras que no aportan contenido semántico de manera directa (por ejemplo, las preposiciones).
 
-La *lemmatización* es un procedimiento que busca reducir las palabras a su forma no flexionada o conjugada. Es una alternativa a la *stemmization*, que intenta reducir heurística e iterativamente la extensión de las palabras, removiendo caracteres, hasta reducirlas a su raíz.[^1] 
-
-[^1]: Así, la expresión "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1”, que da lemmatizada como "google analizar bigdata inferir ritmo contagio gripe h1n1".
+La *lemmatización* es un procedimiento que busca reducir las palabras a su forma no flexionada o conjugada. Es una alternativa a la *stemmization*, que intenta reducir heurística e iterativamente la extensión de las palabras, removiendo caracteres, hasta reducirlas a su raíz. Así, la expresión "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1”, queda lemmatizada como "google analizar bigdata inferir ritmo contagio gripe h1n1".
 
 ```{r}
 oraciones_anotadas2 <- oraciones_anotadas %>% 
