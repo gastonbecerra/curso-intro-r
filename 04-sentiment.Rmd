@@ -1,14 +1,107 @@
-# Preprocesar texto, cruzar tablas y usar funciones
+# Procesamiento del lenguaje natural
 
-En este capítulo vamos a intentar explorar **¿Cuál es la valoración acerca del big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data". 
+En este capítulo nos introduciremos al procesamiento del lenguaje natural, y a una tarea particular de dicho campo: el análisis de sentimiento o polaridad.
 
-A lo largo de este ejercicio veremos:
+Particularmente, vamos a aprender a:
 
-1. cómo pre-procesar texto para su posterior análisis;
-2. cómo cruzar tablas (en nuestro caso, oraciones y diccionarios);
-3. cómo buscar e instalar librerías específicas y preparar los datos para su utilización.
+1. pre-procesar texto para su posterior análisis;
+2. cruzar tablas (en nuestro caso, oraciones y diccionarios);
+3. realizar un análisis de sentimiento, incluyendo la preparación de los datos para el uso de librerías específicas.
 
-Particularmente nos introduciremos en una rama particular del procesamiento del lenguaje natural (NLP), que busca determinar si una oración afirma algo positivo o negativo acerca de un objeto que nos interesa, generalmente conocida como *opinion/ sentiment analysis*. 
+Trabajaremos con un corpus de oraciones, extraídas de noticias argentinas que incluyen la palabra "big data". El objetivo de nuestro análisis será **determinar si el big data es valorado como un fenómeno positivo o negativo**, de acuerdo a la carga valorativa de las palabras que le dan contexto. 
+Esta tarea puede ser útil para comenzar a explorar el fenómeno de la polaridad del big data. Al respecto, luego de analizar noticias acerca de big data en diarios de Estados Unidos, Reino Unido y Australia, @Paganoni2019 sugiere: 
+
+    Big data appears to be framed between two poles—data and information as opposed to rights and privacy—whose gap has of late been emphasised by a number of data scandals affecting business, health and politics, and culminating in the major unforeseen event of Cambridge Analytica and Facebook.
+    
+## Pre-procesamiento de texto
+
+<!-- 2do: armar una base de 100 oraciones bien claras positivo/negativo -->
+<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
+
+Naturalmente, antes de todo proyecto de análisis de datos, necesitamos datos. El dataset con el que trabajaremos en este capítulo fue construido a través de la técnica de *scrapping*, que consiste en capturar datos a partir de la exploración de los elementos y anotaciones HTML de sitios webs. Ahora bien, si quisiéramos inmediatamente "procesar" estos datos, nos encontraríamos con varios problemas. Para empezar, ¿Cómo podríamos hacer para que el montón de textos que tenemos sea interpretable por una máquina que no habla ni entiende nuestro idioma? 
+
+Pues bien, con cualquier dataset, digamos, mayormente numérico, el problema del procesamiento consta de realizar ciertas tareas casi estandarizadas: eliminar outliers, normalizar los datos, completar o desechar valores faltantes, etc. Así, si quisiéramos analizar datos relativos a departamentos en alquiler, por ejemplo, donde nos interesaría predecir el precio de nuevas unidades en función de características como la ubicación, superficie y antigüedad, deberíamos realizar esta serie de operaciones que describimos recientemente para asegurarnos de tener los mejores resultados posibles. Esto no aplica directamente en el terreno del lenguaje natural, donde las tareas de preprocesamiento serán distintas.
+
+El preprocesamiento de datos extraídos del lenguaje natural apunta a la construcción de una representación matemática de los mismos que, como tal, sea entendible y computable por nuestras funciones y modelos. En particular, la representación “matemática” de la que aquí hablaremos será la de un vector, pero hablaremos de esto un poco más adelante. Por lo pronto, es importante entender que lo que se busca es “estructurar” los datos “no-estructurados” para volverlos computables. 
+
+Para llegar a esta instancia de “estructuración” del lenguaje natural, el preprocesamiento deberá encargarse de una serie de operaciones sobre nuestro corpus de texto tendientes a su normalización. En este capítulo haremos 2 tareas específicas: (1) tokenización y análisis morfosintáctico, (2) reducción de las palabras del vocabulario.
+
+Para ello empecemos por cargar los datos
+
+<!-- 2do: definir fuente de datos -->
+<!-- 2do: https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_bd.csv -->
+
+```{r echo=TRUE, message=TRUE, warning=FALSE}
+library(readr) # para leer csv
+library(tidyverse) # para manipular tablas
+
+oraciones <- readr::read_csv(file = "data/oraciones_bd3.csv") # importamos datos
+glimpse(oraciones) # miramos la estructura de la base
+```
+
+Para el análisis morfosintáctico trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano.
+
+Lo primero que debemos hacer es instalar la librería. Luego, deberemos descargar el modelo del idioma que nos interesa. 
+
+```{r, eval=F, echo=T}
+install.packages("udpipe")
+modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia  
+modelo_sp$file_model # refrencia al modelo descargado
+```
+
+O si ya lo tenemos descargado, es conveniente referenciarlo:
+
+```{r, eval=T, echo=T}
+library(udpipe)
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+```
+
+Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y *anotar* qué tipo de componente es cada palabra.
+
+```{r eval=F, echo=T}
+oraciones_anotadas <- udpipe_annotate( 
+  object = modelo_sp, # el modelo de idioma
+  x = oraciones$oracion, # el texto a anotar, 
+  doc_id = oraciones$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 250
+  ) %>% as.data.frame(.) # convertimos el resultado en data frame
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# guardamos el parseado
+# glimpse(oraciones_anotadas)
+# readr::write_csv(x = oraciones_anotadas, file = "data/oraciones_anotadas.csv")
+
+# tomamos el parseado
+oraciones_anotadas <- readr::read_csv(file = "data/oraciones_anotadas.csv")
+```
+
+Vamos a examinar la tabla con las oraciones parseadas:
+
+```{r}
+glimpse(oraciones_anotadas)
+```
+
+Esta anotación se ha encargado de muchas tareas típicas del pre-procesamiento de texto:
+
+* *tokenización*: la unidad mínima del análisis es ahora cada palabra (notá que por eso hay muchas mas filas que antes). El `doc_id` nos permitirá volver a unir las piezas cuando hagamos tareas por oraciones; 
+* para cada palabra se ha anotado el tipo en `upos`;
+* se ha convertido la palabra a su raíz en `lemma`.
+
+Podemos usar `upos` para filtrar palabras. Este paso es una alternativa a la eliminación de *stopwords* y palabras que no aportan contenido semántico de manera directa (por ejemplo, las preposiciones).
+
+La *lemmatización* es un procedimiento que busca reducir las palabras a su forma no flexionada o conjugada. Es una alternativa a la *stemmization*, que intenta reducir heurística e iterativamente la extensión de las palabras, removiendo caracteres, hasta reducirlas a su raíz.[^1] 
+
+[^1]: Así, la expresión "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1”, que da lemmatizada como "google analizar bigdata inferir ritmo contagio gripe h1n1".
+
+```{r}
+oraciones_anotadas2 <- oraciones_anotadas %>% 
+  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") # filtramos por tipo de palabra
+glimpse(oraciones_anotadas2)
+```
+Es interesante señalar que pasamos de `r nrow(oraciones_anotadas)` palabras parseadas y anotadas, a solo `r nrow(oraciones_anotadas2)`, que son con las que trabajaremos.
+
+## Análisis de sentimiento
 
 Generalmente se acepta que hay 2 métodos para este tipo de análisis: 
 
@@ -22,123 +115,11 @@ Buscaremos implementar esto de dos maneras:
 1. en primer lugar, cruzando la tabla de oraciones con el lexicon, y haciendo nosotros alguna evaluación; 
 2. en segundo lugar, con una librería que contemple las falencias de nuestro primer enfoque.
 
-## Cruce manual 
-
-### Cargar datos y recursos
-
-En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse` para manipular y visualizar. También vamos a importar los datos con la función `read_csv()` de la librería `readr`. 
-
-<!-- 2do: definir fuente de datos -->
-<!-- 2do: armar una base de 100 oraciones bien claras positivo/negativo -->
-<!-- 2do: https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_bd.csv -->
-
-```{r echo=TRUE, message=TRUE, warning=FALSE}
-library(readr) # vamos a cargar las librerias
-library(tidyverse) 
-
-oraciones <- readr::read_csv(file = "data/oraciones_bd3.csv") # importamos
-glimpse(oraciones) # miramos la estructura de la base
-```
-
-### Pre-procesamiento de texto
-
-Para poder completar nuestros análisis primeros realizaremos varias tareas de preprocesamiento:
-
-1. Haremos un análisis gramatical para determinar los distintos componentes de la oración;
-2. Reduciremos las palabras a sus *lemmas*, formas básicas de las palabras, sin género ni conjugación;
-3. Descartaremos algunas palabras, quedándonos sólo con las más importantes para determinar la valoración.
-
-Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano.
-
-Lo primero que debemos hacer es instalar la librería. Luego, deberemos descargar el modelo del idioma que nos interesa. 
-
-```{r, eval=F, echo=T}
-install.packages("udpipe")
-modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia en un objeto modelo_sp$file_model
-```
-
-O si ya lo tenemos descargado, es conveniente referenciarlo:
-
-```{r, eval=T, echo=T}
-library(udpipe)
-modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
-```
-
-Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y *anotar* qué tipo de componente es cada palabra, además de lemmatizarlas.
-
-```{r eval=F, echo=T}
-
-oraciones_anotadas <- udpipe_annotate( 
-  object = modelo_sp, # el modelo de idioma
-  x = oraciones$oracion, # el texto a anotar, 
-  doc_id = oraciones$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
-  trace = 250
-  ) %>% as.data.frame(.) # convertimos el resultado en data frame
-
-```
-
-```{r message=FALSE, warning=FALSE, include=FALSE}
-
-# guardamos el parseado
-# glimpse(oraciones_anotadas)
-# readr::write_csv(x = oraciones_anotadas, file = "data/oraciones_anotadas.csv")
-
-# tomamos el parseado
-oraciones_anotadas <- readr::read_csv(file = "data/oraciones_anotadas.csv")
-
-```
-
-Vamos a examinar la tabla con las oraciones parseadas:
-
-```{r}
-glimpse(oraciones_anotadas)
-```
-
-Las siguientes variables nos interesan para preparar los datos para el análisis:
-
-* `doc_id`: dado que la tabla es "larga", y tiene 1 fila por cada palabra de cada oración, el doc_id nos permitirá volver a unir las piezas cuando hagamos tareas por oraciones; 
-* `lemma`: incluye la forma lemmatizada de la palabra, sin género, en singular, y sin conjugación, y la vuelve minúscula (e.g., "es" se vuelve "ser", y "Datos" se conviernete en "dato");
-* `upos`: nos permite aclarar qué tipo de palabra es;
-
-También notemos que la anotación convirtió la columna `doc_id` en una columna de texto. Conviene que corrijamos esto:
-
-```{r}
-oraciones_anotadas <- oraciones_anotadas %>% mutate(doc_id=as.integer(doc_id))
-```
-
-
-<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
-
-Aquí empiezan las decisiones que afectarán la calidad de los análisis, en relación al tipo de resultados que busquemos.
-
-Nuestra primera decisión es aprovechar la información de `upos` para quedaremos con las palabras que probablemente tengan mayor peso para conferir una orientación positiva o negativa: adjetivos, verbos, sustantivos y adverbios.
-
-Además, filtraremos la palabra "bigdata" ya que es esta justamente la que queremos definir por su contexto.
-
-(También seleccionaremos algunas columnas para trabajar, pero esto solamente por comodidad).
-
-```{r}
-oraciones_anotadas2 <- oraciones_anotadas %>% 
-  #select( doc_id, lemma, upos ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
-  filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN" | upos=="ADV") %>% # filtramos por tipo de palabra
-  filter(lemma != "bigdata")
-glimpse(oraciones_anotadas2)
-```
-
-Es interesante señalar que pasamos de `r nrow(oraciones_anotadas)` palabras parseadas y anotadas, a solo `r nrow(oraciones_anotadas2)`, que son con las que trabajaremos.
-
-### Cruzamos tablas (lexicones)
+### Cruce con lexicones
 
 Ahora podemos cruzar los lemmas de nuestras oraciones con los lexicones, para calcular la orientación de cada oración que incluye big data.
 
-<!-- 2do: simplificar en 1 solo lexicon -->
-
-Vamos a trabajar con 1 lexicón construido a partir de otros dos:
-
-1. *Spanish Dictionary Affect Language* (`sdal`), desarrollado por @Gravano2014, que replica el modelo de @Whissell2009. Este es un lexicon formado por 2700+ términos, clasificados manualmente en tres dimensiones afectivas, de las cuales aquí utilizamos el agrado.
-2. *Lexicon de evocaciones a big data* (`evoc`), desarrollado por @Becerra2020 en el marco de una investigación sobre las representaciones sociales del big data con la técnica de la evocación libre de palabras, a la que se añadió la posibilidad de aclarar la valoración del término incluído. Este es un lexicon formado por 1500+ términos. 
-
-Para unir estos lexicones tuvimos que lemmatizar los términos, escalar las valoraciones dentro del rango -1 y 1, eliminamos ambigüedades calculando la media. 
+Vamos a trabajar con 1 lexicón construido a partir de otros dos: 1. *Spanish Dictionary Affect Language* (`sdal`), desarrollado por @Gravano2014, que replica el modelo de @Whissell2009. Este es un lexicon formado por 2700+ términos, clasificados manualmente en tres dimensiones afectivas, de las cuales aquí utilizamos el agrado; 2. *Lexicon de evocaciones a big data* (`evoc`), desarrollado por @Becerra2020 en el marco de una investigación sobre las representaciones sociales del big data con la técnica de la evocación libre de palabras, a la que se añadió la posibilidad de aclarar la valoración del término incluído. Este es un lexicon formado por 1500+ términos. Para unir estos lexicones tuvimos que lemmatizar los términos, escalar las valoraciones dentro del rango -1 y 1, eliminamos ambigüedades calculando la media. 
 
 ```{r eval=FALSE, include=FALSE}
 # mergeo los lexicones
@@ -164,11 +145,11 @@ readr::write_csv(lexicones, 'data/lexicones.csv')
 lexicones <- readr::read_csv('data/lexicones.csv')
 summary(lexicones)
 ```
-
 Ahora sí: vamos a cruzar tablas! Particularmente, nos interesa ver si los lemmas que extrajimos de nuestras oraciones coinciden con los lemmas en los lexicones. 
 En cuyo caso, vamos a anotar la media de las valoraciones de estos lexicones, junto con la cantidad de lemmas que tomamos de cada oracion (para saber cuantos lemmas con valoraciones hay en la oracion), entre otros indicadores que podamos usar para evaluar y filtrar resultados.
 
 Para cruzar tablas usaremos los verbos `_join`, o más específicamente, `left_join` que mantiene todas las filas de nuestra tabla, agregandole las columnas con los valores de otra. Para hacer el cruce de tablas, `_join` utiliza las columnas de nombre coincidente (aunque podés especificar los pares con `by = c("x"="y")`). Esta es una opción de unión entre otras: `left_join`, `inner_join`, `anti_join`.
+
 [Tomado de https://es.r4ds.hadley.nz/datos-relacionales.html](images/join-venn.svg)
 
 ```{r}
@@ -224,7 +205,7 @@ Estos resultados parecen ser un poco mejores, aunque esta evaluación dependerá
 
 Ahora que podemos intuir los límites y potenciales de este tipo de procesamiento del lenguaje, vamos a volver a realizar estos análisis, con un procedimiento mucho más robusto, utilizando funciones de librerías o packages. 
 
-## Uso de packages
+### Uso de packages
 
 En lo que sigue vamos a realizar *sentiment analysis* utilizando packages, particularmente con `txt_sentiment` del package `Udpipe` que ya usamos para anotar las oraciones.
 
@@ -356,4 +337,3 @@ oraciones_txt_sentiment$overall %>%
 <!--   ) -->
 <!-- glimpse(sentr_result) -->
 <!-- ``` -->
-

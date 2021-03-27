@@ -1,31 +1,32 @@
-# Clasificar automáticamente a partir de otros datos
+# Clasificar automáticamente 
 
-En este capítulo vamos a intentar explorar **¿Cuál es la valoración sobre big data?**, utilizando un corpus de oraciones, extraídas de sitios de noticias digitales argentinas, que incluyen la palabra "big data", y que fueron anotados a mano, clasificando entre sentidos positivos y negativos.
+En este capítulo nos introduciremos a una técnica de aprendizaje supervisado, que busca clasificar texto en base a otros documentos ya clasificados. 
 
-APRENDIZAJE SUPERVISADO
+Particularmente, vamos a trabajar con un corpus de oraciones que tratan con el big data, que han sido catalogadas manualmente como positivas o negativas. En este sentido, este ejercicio continúa, con otro método, el análisis de sentimiento que vimos en un capítulo anterior.
 
-1. pre-procesarlo y explorarlo
-2. armar un vectorizado
-3. dividir en training / test
-4. armar el modelo
+A lo largo de este ejercicio veremos:
+
+1. pre-procesamiento de texto;
+2. vectorización de los textos;
+3. subdivisión del corpus para entrenamiento y testeo;
+4. armar el modelo de clasificación;
 5. evaluar el modelo
 6. ajustar el modelo
 
 ## Preprocesamiento
 
-```{r}
-library(tidyverse)
-library(tidytext)
-library(stringr)
-library(caret)
-library(tm)
+```{r message=FALSE, warning=FALSE}
+library(tidyverse) # para manipular tablas
+library(tidytext) # para manejar texto
+library(stringr) # para modificar cadenas de palabras
+library(caret) # para modelo
+library(tm) # para modelo
 
-oraciones <- readr::read_csv("./data/oraciones_entrenar.csv")
-glimpse(oraciones)
-table(oraciones$target)
+oraciones <- readr::read_csv("./data/oraciones_entrenar.csv") # importamos los datos
+glimpse(oraciones) # exploramos la estructura de los datos
+table(oraciones$target) # vemos la distribución de las clasificaciones
 
-set.seed(100)
-
+set.seed(100) # seteamos una semilla, para poder reproducir los resultados
 ```
 
 es un dataset desbalanceado
@@ -62,6 +63,32 @@ glimpse(oraciones_anotadas2)
 falta lemmatizar
 
 ## armado del vector
+
+Comúnmente, los modelos de *machine learning* son entrenados con datos estructurados en forma de tablas. Cuando trabajamos con texto debemos construir estas tablas a partir de las palabras de la oración, o del documento con el que estemos trabajando. Esto lo hacemos con el *vectorizado*.
+
+Supongamos que tenemos dos frases: "El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados” y "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1", que en su forma lemmatizada y filtrada serían "bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado" y "google analizar bigdata inferir ritmo contagio gripe h1n1".
+ 
+Veamos cómo se vería estas oraciones vectorizadas:
+
+```{r eval=TRUE, echo=FALSE}
+data.frame(
+        Index = c(1L, 2L),
+      bigdata = c(1L, 1L),
+          ser = c(1L, 0L),
+     conjunto = c(1L, 0L),
+      tecnica = c(1L, 0L),
+       grande = c(1L, 0L),
+  corporacion = c(1L, 0L),
+     analizar = c(1L, 1L),
+    manipular = c(1L, 0L),
+      inferir = c(0L, 1L),
+         n... = c(NA, NA)
+)
+```
+
+Aquí hemos reducido cada oración a una "bolsa de palabras", que ha resignado el contexto de formulación de las expresiones verbales, perdiendo el orden. Nos quedamos entonces sólo con un vocabulario general que, para cada oración, anota la frecuencia de aparición con 1 y 0, es decir, con datos que son interpretables por una computadora y que nos pueden servir para entrenar un modelo de machine learning.
+
+Con R es muy fácil generar estos vectores y manipularlos.
 
 ```{r}
 # crea dtm (matrix)

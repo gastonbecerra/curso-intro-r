@@ -1,20 +1,16 @@
-# Explorar, manipular y visualizar datos
+# Análisis de datos con R
 
-En este capítulo vamos a intentar responder **cuál es el sentido común en torno al big data**. Esto nos ubica en las coordenadas de la psicología social, particularmente de la *teoría de la representación social*, a la que nos acercaremos siguiendo la variante estructural de @Abric2001, y recurriendo a técnicas cuantitativas.
+En este capítulos nos introduciremos al ciclo de trabajo del análisis de datos, así como al lenguaje R. Particularmente, vamos a aprender a:
 
-Más adelante en este capítulos vamos a recrear un tipo de análisis propio de esta teoría. Por ahora, vamos a explorar el dataset.
+1. cargar datos y recursos;
+2. explorar y familiarizarnos con los datos y su estructura;
+3. transformar los datos para limpiarlos y que tengan la estructura óptima para nuestros análisis;
+4. hacer nuestros primeros gráficos;
+5. generar nuestras propias funciones.
 
-Vamos a trabajar con el dataset de asociaciones libres a la palabra "Big data". Este es un dataset construido a partir de una breve encuesta con la siguiente consigna: *Por favor, indicanos qué palabras o frases te vienen a la mente cuando pensás en "big data". También te pedimos que, por favor, nos indiques si estas ideas que acabas de introducir se corresponden con algo que valoras positivamente (algo que te agrada) o negativamente (algo que te desagrada)"*. Además, hemos registrado el orden en que cada palabra fue introducida por el participante (un valor generalmente entre 1 a 5, aunque los participantes podían ingresar más palabras).
+Trabajaremos con un dataset de asociaciones libres a la palabra "Big data". Este es un dataset construido a partir de una breve encuesta con la siguiente consigna: *Por favor, indicanos qué palabras o frases te vienen a la mente cuando pensás en "big data". También te pedimos que, por favor, nos indiques si estas ideas que acabas de introducir se corresponden con algo que valoras positivamente (algo que te agrada) o negativamente (algo que te desagrada)"*. Además, hemos registrado el orden en que cada palabra fue introducida por el participante (un valor generalmente entre 1 a 5, aunque los participantes podían ingresar más palabras).
 
-Con este dataset vamos a: 
-
-1. explorar y familiarizarnos con los datos y su estructura;
-2. transformar los datos para limpiarlos y que tengan la estructura óptima para nuestros análisis;
-3. hacer nuestros primeros gráficos;
-4. generar nuestras propias funciones;
-5. pensar gráficos que nos ayuden el análisis.
-
-Estos pasos nos van a enfrentar a la parte menos trivial de cualquier indagación: *tomar decisiones*.
+Con este dataset, y a través de las tareas señaladas, vamos a intentar responder **cuál es el sentido común en torno al big data**. Esto nos ubica en las coordenadas de la psicología social, particularmente de la *teoría de la representación social*, a la que nos acercaremos siguiendo la variante estructural de @Abric2001, y recurriendo a técnicas cuantitativas. Hacia el final del capítulo recrearemos el "análisis prototípico" de esta teoría y discutiremos la interpretación de los resultados.
 
 ## Cargar datos y recursos
 
@@ -37,9 +33,7 @@ library(tidyverse)
 asociaciones <- readr::read_csv(file = "data/asociaciones.csv")
 ```
 
-
 ## Explorar los datos
-
 
 El objetivo del momento de exploración de los datos es familiarizarnos con la estructura de los datos, y transformarlos para poder realizar nuestros análisis. Por lo general, aquí se empiezan a decidir las tareas de *limpieza*. 
 
@@ -55,7 +49,6 @@ Esto nos va a permitir saber:
 dim(asociaciones)
 head(asociaciones, n = 10) 
 ```
-
 
 Por lo que podemos ver, tenemos 4 columas: `id` y `palabra` son variables de texto (`<chr>`), mientras `orden` y `valoracion` son numéricas. Otro posible tipo de columna es el `factor` (`<fct>`) que sirve para registrar categorías, donde cada valor posible es un `level`.
 
@@ -78,9 +71,7 @@ Muchas de estas tareas se pueden hacer con [distintos packages](https://www.grou
 
 Recordá que podes ver la tabla, como si estuvieras viendo una planilla, con `view(asociaciones)`.
 
-
 ## Transformar, visualizar y limpiar
-
 
 Ahora vamos a ver de qué manera podemos transformar los datos para obtener respuestas a las siguientes preguntas:
 
@@ -317,8 +308,9 @@ Otra vez, es hora de tomar decisiones. Como vemos, esta última configuración l
 analisis_proto(tabla_evocaciones = asociaciones, frecuencia_minima = 5, criterio_corte = "media")
 ```
 
-
 Va tomando forma! 
+
+## Interpretación
 
 Siguiendo el *análisis prototípico*, nos interesan las asociaciones registradas con una frecuencia mayor y un rango por debajo de la media, es decir, las más frecuentes y salienten, ya que son las principales candidatas a expresar los sentidos más centrales y consensuados de la representación. En nuestra tabla serían aquellos registros con `segmento == 1`.
 
@@ -327,8 +319,6 @@ En @Becerra2020 con un dataset muy similar a este sugeríamos:
 > El primer segmento comprende a las palabras enunciadas más frecuentemente y de más rápida evocación, es decir, las más comunes y accesibles. Estos son los términos que se puede decir que constituyen el núcleo de la representación: información, dato, internet, control, grande, bases de datos, manipulación, conocimiento, marketing, poder, computadora, espionaje, y grandes datos. Mayormente refieren a lo que denominamos la “premisa” del big data: la disponibilidad de grandes bases de datos, plausibles de otorgar información. Es interesante señalar que el término grande (lemma en el que convergen distintos términos, tales como grandes, mucho) es el único en el núcleo que remite a las famosas 3 V’s –volumen, velocidad y variedad– que popularizara Laney y que se referencia en prácticamente todas las noticias que buscan introducir al big data a un público masivo ...
 
 > Mayormente estos términos están asociados con una valoración positiva, ... siendo conocimiento la palabra de mayor valor medio ... Sin embargo, también aparecen en este mismo segmento, las 3 palabras de menor valoración en todo el corpus: manipulación, espionaje y control. ... La distribución de estas valoraciones es indicativa de la polaridad que recubre el campo semántico del big data, en tanto la imagen de la “gran oportunidad” que ofrece su promesa epistémica, convive con una retórica de sospecha frente a los riesgos de su explotación para el sometimiento y el condicionamiento de otros, como un “gran hermano”.
-
-## Visualizaciones más complejas
 
 Veamos una tabla típica con las que se suelen mostrar estos análisis prototípicos. El sigiuente es un ejemplo tomado de @Wachelke2011, sobre un estudio de las RS sobre el trabajo.
 

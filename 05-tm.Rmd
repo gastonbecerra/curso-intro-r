@@ -1,8 +1,6 @@
 # Modelado de tópicos
 
-En este capítulo vamos a intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. 
-
-Particularmente nos interesa una técnica particular dentro del campo del procesamiento del lenguaje natural (NLP), que busca construir tópicos en base a las distribuciones de palabras en un conjunto de documentos, generalmente conocida como *topic modeling*. 
+En este capítulo nos introduciremos a una técnica de aprendizaje no supervisado en el campo del procesamiento del lenguaje natural: el modelado de tópicos (*topic modeling*). Esta técnica busca construir tópicos o temas en base a las distribuciones de palabras en un conjunto de documentos.
 
 A lo largo de este ejercicio veremos:
 
@@ -11,14 +9,15 @@ A lo largo de este ejercicio veremos:
 3. cómo modelar tópicos;
 4. cómo interpretar los tópicos, leyendo los resultados junto con nuestro propio análisis cualitativo, entre otras indagaciones.
 
-## Cargar datos y recursos
+Vamos a utilizar esta técnica para intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. Nos interesa particularmente indagar de qué manera el big data es contextualizado, de modo tal que el modelado de tópicos pueden asistir al análisis de "frames" discursivos. Este tipo de análisis son útiles para investigar acerca de la construcción social de un fenómeno por parte de un sistema de comunicación, como es la prensa [@Jacoby2016].
+
+## Pre-procesamiento de texto
+
+Como en toda tarea de procesamiento del lenguaje natural, comenzaremos por cargar el corpus y preprocesar el texto.
 
 ```{r eval=FALSE, include=FALSE}
-
 # elegir 5 fuentes y cortar 20 de cada uno
-
 x <- readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda")
-
 readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda") %>%
   select(link=items.link, txt=fullContent, fuente=items.displayLink, titulo=items.title) %>% 
   filter(fuente %in% 
@@ -30,12 +29,6 @@ readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda") %>%
   saveRDS(file = "data/noticias_curso.rds")
 ```
 
-En lo que sigue vamos a trabajar mayormente con funciones del paquete `tidyverse` para XXX.
-
-<!-- 2do: librerias -->
-<!-- 2do: definir fuente de datos -->
-<!-- 2do: meter un id -->
-
 ```{r echo=TRUE, message=TRUE, warning=FALSE}
 library(tidyverse) # para manipular en general
 library(tidytext) # para convertir los objetos a formatos requeridos / devueltos por LDA
@@ -44,31 +37,18 @@ noticias <- readRDS(file = "data/noticias_curso.rds") %>% mutate(id=1:n())
 glimpse(noticias) # miramos la estructura de la base
 ```
 
-## Pre-procesamiento de texto
-
 Para poder completar nuestros análisis primeros realizaremos varias tareas de preprocesamiento:
 
 1. Haremos un análisis morfosintático para determinar los distintos componentes de la oración;
 2. Reduciremos las palabras a sus *lemmas*, formas básicas de las palabras, sin género ni conjugación;
 3. Descartaremos algunas palabras comunes, quedándonos sólo con las más significativas.
 
-Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano.
-
-Lo primero que debemos hacer es instalar la librería. Luego, deberemos descargar el modelo del idioma que nos interesa. 
-
-```{r, eval=F, echo=T}
-install.packages("udpipe")
-modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia en un objeto modelo_sp$file_model
-```
-
-O si ya lo tenemos descargado, es conveniente referenciarlo:
+Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano. En el capítulo anterior hemos instalado esta librería y descargado el modelo del idioma.
 
 ```{r, eval=T, echo=T}
 library(udpipe)
-modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe") # ruta al modelo
 ```
-
-Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de oraciones, y *anotar* qué tipo de componente es cada palabra, además de lemmatizarlas.
 
 ```{r eval=F, echo=T}
 noticias_anotadas <- udpipe_annotate( 
@@ -80,7 +60,6 @@ noticias_anotadas <- udpipe_annotate(
 ```
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-
 # guardamos el parseado
 # readr::write_csv(x = noticias_anotadas, file = "data_ignore/noticias_anotadas.csv")
 
@@ -88,25 +67,9 @@ noticias_anotadas <- udpipe_annotate(
 noticias_anotadas <- readr::read_csv(file = "data_ignore/noticias_anotadas.csv")
 ```
 
-Vamos a examinar la tabla con las oraciones parseadas:
-
-```{r}
-glimpse(noticias_anotadas)
-```
-
-Las siguientes variables nos interesan para preparar los datos para el análisis:
-
-* `doc_id`: dado que la tabla es "larga", y tiene 1 fila por cada palabra de cada oración, el doc_id nos permitirá volver a unir las piezas cuando hagamos tareas por oraciones; 
-* `lemma`: incluye la forma lemmatizada de la palabra, sin género, en singular, y sin conjugación, y la vuelve minúscula (e.g., "es" se vuelve "ser", y "Datos" se conviernete en "dato");
-* `upos`: nos permite aclarar qué tipo de palabra es;
-
-<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
-
 Al igual que en el tutorial anterior, usaremos la información de `upos` para filtrar las palabras que podrían ser más signficativas: adjetivos, verbos, y sustantivos. 
 Aquí omitimos los adverbios, ya que no nos interesan las posibles modificaciones del sentido entre palabras cercanas, como negaciones o amplificaciones.
-Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`.
-
-(También seleccionaremos algunas columnas para trabajar, pero esto solamente por comodidad).
+Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`. Además, incluimos un conjunto de verbos ad-hoc para ser eliminados.
 
 ```{r}
 
@@ -184,20 +147,24 @@ glimpse(noticias_tm_gamma)
 
 ## Interpretar el modelo
 
-Los resultados arrojados por el modelo pueden ser útiles para inferir tópicos. No obstante, esto implica un proceso de interpretación cualitativo por parte del investigador, que comienza con el "etiquetado", y en el que se deben tomar varias decisiones metodológicas, así como atender a sus desafíos.
-Especialmente, el desafío de "transparentar" la parte humana de este análisis para asegurar la credibilidad de nuestras inferencias y decisiones, a la vez que permitir interpretaciones alternativas. 
-
-Generalmente, el análisis de los tópicos supone varios momentos:
+Los resultados arrojados por el modelo pueden ser útiles para inferir tópicos. No obstante, esto implica un proceso iterativo de interpretación por parte del investigador, que incluye varios momentos:
 
 1. etiquetado manual y organización de los tópicos;
-2. análisis cualitativo de los documentos;
-3. validación estadística y determinación de K;
-4. validación de metadatos contra supuestos;
-5. explorar relaciones entre tópicos;
-6. explorar relaciones y diferencias en los metadatos; 
-7. explorar relaciones y diferencias en los contenidos (usando lexicones).
+2. validación cualitativa y estadística;
+3. heurística.
+
+Este proceso de interpretación tiene 
+
+DESAFIOS DE INV CUALI
+
+ABRIR CAJA NEGRA
+Especialmente, el desafío de "transparentar" la parte humana de este análisis para asegurar la credibilidad de nuestras inferencias y decisiones, a la vez que permitir interpretaciones alternativas. 
 
 Al igual que en los diseños cualitativos debemos tener en consideración 2 cuestiones: (1) que las distintas tareas y momentos del análisis no son secuenciales sino más bien iterativos, y que constantemente iremos tomando decisiones que afectan (hacia adelante) y que informan (hacia atras) a otras decisiones; (2) que todas estas decisiones serán mas claras y robustas si son producto del consenso entre distintos analistas que trabajan en forma autónoma y que documentan e intercambian la razones de sus decisiones [@Auerbach2003].
+
+En vistas de todas estas decisiones, @Bechmann2019 sugieren:
+
+    Seemingly unsupervised model becomes extremely supervised due to classification work such as setting number of topics, cleaning data in a particular way with an apriori understanding of "meaningful" clusters and interpreting clusters with parent classes manually. 
 
 ### Etiquetado manual y organización de los tópicos
 
@@ -256,6 +223,22 @@ Más bien, nos interesa hacer un *análisis de contenido* manual de algunos docu
 En este momento sólo usaremos R para construir la muestra de documentos a analizar manualmente en otro entorno[^1]. 
 
 [^1]: Generalmente para estas tareas se puede utilizar otro software destinado al análisis cualitativo (CAQDAS), como atlas.ti o nvivo. Existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/).
+
+1. etiquetado manual y organización de los tópicos;
+2. análisis cualitativo de los documentos;
+3. validación estadística y determinación de K;
+4. validación de metadatos contra supuestos;
+5. explorar relaciones entre tópicos;
+6. explorar relaciones y diferencias en los metadatos; 
+7. explorar relaciones y diferencias en los contenidos (usando lexicones).
+
+
+
+
+
+
+
+
 
 
 
