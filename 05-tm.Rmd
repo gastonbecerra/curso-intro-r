@@ -16,17 +16,20 @@ Vamos a utilizar esta técnica para intentar explorar **¿Cuál es la tematizaci
 Como en toda tarea de procesamiento del lenguaje natural, comenzaremos por cargar el corpus y preprocesar el texto.
 
 ```{r eval=FALSE, include=FALSE}
+noticias_para_anotar <- readRDS("./data_ignore/noticiasLimpias_2026_20191018_130620.rda")
+glimpse(noticias_para_anotar)
+
 # elegir 5 fuentes y cortar 20 de cada uno
-x <- readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda")
-readRDS(file="E:/r/bigdata-medios/data2/noticias_3270_20181017_143053.rda") %>%
-  select(link=items.link, txt=fullContent, fuente=items.displayLink, titulo=items.title) %>% 
+noticias_para_anotar <- readRDS("./data_ignore/noticiasLimpias_2026_20191018_130620.rda") %>%
+  filter(!is.na(fecha)) %>%
+  select(id=noticia_id, fecha, titulo=items.title, txt=text, fuente=items.displayLink ) %>% 
   filter(fuente %in% 
            c("www.clarin.com", "www.iprofesional.com", "www.pagina12.com.ar", "tn.com.ar", "www.telam.com.ar"),
          !is.na(txt)) %>%
   group_by(fuente) %>% sample_n(20) %>%
   ungroup() %>%
-  mutate(id=1:n()) %>%
   saveRDS(file = "data/noticias_curso.rds")
+
 ```
 
 ```{r echo=TRUE, message=TRUE, warning=FALSE}
@@ -67,12 +70,11 @@ noticias_anotadas <- udpipe_annotate(
 noticias_anotadas <- readr::read_csv(file = "data_ignore/noticias_anotadas.csv")
 ```
 
-Al igual que en el tutorial anterior, usaremos la información de `upos` para filtrar las palabras que podrían ser más signficativas: adjetivos, verbos, y sustantivos. 
+Al igual que en el capítulo anterior, usaremos la información de `upos` para filtrar las palabras que podrían ser más signficativas: adjetivos, verbos, y sustantivos. 
 Aquí omitimos los adverbios, ya que no nos interesan las posibles modificaciones del sentido entre palabras cercanas, como negaciones o amplificaciones.
 Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`. Además, incluimos un conjunto de verbos ad-hoc para ser eliminados.
 
 ```{r}
-
 noticias_anotadas2 <- noticias_anotadas %>% 
   filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN") %>% # filtramos por tipo de palabra
   select( doc_id, lemma ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
@@ -85,7 +87,7 @@ glimpse(noticias_anotadas2)
 
 Comúnmente, los modelos de *machine learning* son entrenados con datos estructurados en forma de tablas. Cuando trabajamos con texto debemos construir estas tablas a partir de las palabras del documento con el que estemos trabajando. Esto lo hacemos con el *vectorizado*.
 
-Supongamos que tenemos dos documentos con una oración cada uno: "El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados” y "Google analiza big data para inferir el ritmo de contagio de la gripe H1N1", que en su forma lemmatizada y filtrada serían "bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado" y "google analizar bigdata inferir ritmo contagio gripe h1n1".
+Supongamos que tenemos dos documentos con una oración cada uno: `El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados` y `Google analiza big data para inferir el ritmo de contagio de la gripe H1N1`, que en su forma lemmatizada y filtrada serían `bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado` y `google analizar bigdata inferir ritmo contagio gripe h1n1`.
  
 Veamos cómo se vería estas oraciones vectorizadas:
 
@@ -120,6 +122,13 @@ El objeto tipo `DocumentTermMatrix` nos informa la cantidad de documentos y la c
 
 ## Modelado de tópicos con LDA
 
+> Topic models draw on the notion of distributional semantics (Turney & Pantel, 2010) and particularly make use of the so-called bag of words assumption, i.e., the ordering of words within each document is ignored. To grasp the thematic structure of a document, it is sufficient to describe its distribution of words (Grimmer & Stewart, 2013).
+@Maier2018.
+
+> Seemingly unsupervised model becomes extremely supervised due to classification work such as setting number of topics, cleaning data in a particular way with an apriori understanding of "meaningful" clusters and interpreting clusters with parent classes manually
+@Bechmann2019
+
+
 ### Sobre el modelo LDA
 
 Para construir los tópicos usaremos el modelo Latent Dirichlet Allocation, a través del pack `topicmodels`. Este modelo genera *tópicos* proponiendo una cierta distribución de todas las palabras del corpus, y calcula la distribución de estos tópicos en cada documentos. 
@@ -134,7 +143,7 @@ A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los
 Vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
 
 ```{r eval=F, echo=T}
-k_topics <- 6 # numero de topicos
+k_topics <- 5 # numero de topicos
 noticias_tm <- topicmodels::LDA(noticias_dtm, k = k_topics, method = "Gibbs", control = list(seed = 1:3, nstart=3, verbose=1000))
 ```
 
@@ -166,21 +175,10 @@ glimpse(noticias_tm_gamma)
 Los resultados arrojados por el modelo pueden ser útiles para inferir tópicos. No obstante, esto implica un proceso iterativo de interpretación por parte del investigador, que incluye varios momentos:
 
 1. etiquetado manual y organización de los tópicos;
-2. validación cualitativa y estadística;
-3. heurística.
+2. análisis de contenido;
+3. validación;
 
-Este proceso de interpretación tiene 
-
-DESAFIOS DE INV CUALI
-
-ABRIR CAJA NEGRA
-Especialmente, el desafío de "transparentar" la parte humana de este análisis para asegurar la credibilidad de nuestras inferencias y decisiones, a la vez que permitir interpretaciones alternativas. 
-
-Al igual que en los diseños cualitativos debemos tener en consideración 2 cuestiones: (1) que las distintas tareas y momentos del análisis no son secuenciales sino más bien iterativos, y que constantemente iremos tomando decisiones que afectan (hacia adelante) y que informan (hacia atras) a otras decisiones; (2) que todas estas decisiones serán mas claras y robustas si son producto del consenso entre distintos analistas que trabajan en forma autónoma y que documentan e intercambian la razones de sus decisiones [@Auerbach2003].
-
-En vistas de todas estas decisiones, @Bechmann2019 sugieren:
-
-> Seemingly unsupervised model becomes extremely supervised due to classification work such as setting number of topics, cleaning data in a particular way with an apriori understanding of "meaningful" clusters and interpreting clusters with parent classes manually. 
+Al igual que en los diseños cualitativos debemos tener en consideración 2 cuestiones: (1) que las distintas tareas y momentos del análisis no son secuenciales sino más bien iterativos, y que constantemente iremos tomando decisiones que afectan (hacia adelante) y que informan (hacia atras) a otros momentos; (2) que todas estas decisiones serán mas claras y robustas si son producto del consenso entre distintos analistas que trabajan en forma autónoma y que documentan e intercambian la razones de sus decisiones [@Auerbach2003]. 
 
 ### Etiquetado manual y organización de los tópicos
 
@@ -202,49 +200,127 @@ noticias_tm_beta %>% # principales términos en cada tópico
 
 El objetivo del análisis que haremos (manualmente) sobre estos datos es el de evaluar si hay un campo coherente de palabras en cada tópico, para luego asignarle una etiqueta que lo describa. En tanto estas son todas inferencias nuestras, en el mejor de los casos, guidados por nuestro conocimiento teórico del fenómeno, nos ubicamos en el plano de las hipótesis. 
 
-Veamos esto con nuestros datos:
+Veamos esto con nuestros datos, tendiendo en mente el criterio de construcción del corpus (noticias que incluyen "big data"):
 
-* Tópico 1: sobresalen palabras como tecnología, sistema, mundo, inteligencia y artificial que nos permiten inferir el campo de las transformaciones tecnológicas recientes y sus proyecciones;
-* Tópico 2: dato, información, persona, usuario, red (social), nos remiten al proceso que teóricamente llamamos "datificación", al cual entendemos como el trasfondo social del big data [@VanDijck2014];
-* Tópico 3: equipo, historia, mundial, selección y jugador nos permiten inferir que se trata del deporte;
-* Tópico 4: campañana, gobierno, presidente, política, electoral remiten a elecciones políticas;
-* Tópico 5: red, series, sociedad, comunicación, dispositivo, si bien no permiten hipotetizar un tópico coherente, tal vez refieran a plataformas, apps o redes sociales;
-* Tópico 6: palabras como empresa, digital, negocio, y cliente, nos permiten inferir el campo semántico del comercio digital.
+* Tópico 1: digital, país, desarrollo, tecnología, presidente nos permiten asumir que se trata de noticias que vinculan al big data con política tecnológica;
+* Tópico 2: dato, bigdata, empresa, sector, herramienta, decisión, nos permite suponer que en las noticias se trate al bigdata como una herramienta para de gestión;
+* Tópico 3: campañana, político, público, elección nos permiten inferir el campo de las elecciones políticas;
+* Tópico 4: humano, mismo, tiempo, vida, máquina son expresiones esperables en artículos críticos de los avances tecnológicos;
+* Tópico 5: información, dato, bigdata, usuario, empresa, internet son nociones que nos remiten a redes sociales y plataformas. Esta es una interpretación (hipotética) de las palabras en relación a los conceptos de la datificación y el big data social [@VanDijck2014].
 
-Vamos a escribir estas 6 etiquetas en un array de nombres de tópicos, por si necesitamos incluirlos en futuros gráficos como etiquetas:
+Vamos a escribir estas etiquetas en un array de nombres de tópicos, por si necesitamos incluirlos en futuros gráficos como etiquetas:
 
 ```{r}
-topicos_nombres <- c("T1"="1. Transformaciones",
-                     "T2"="2. Datificacion",
-                     "T3"="3. Deporte",
-                     "T4"="4. Elecciones",
-                     "T5"="5. Plataformas",
-                     "T6"="6. Comercio")
+topicos_nombres <- c("T1"="1. Pol. tecnológica",
+                     "T2"="2. Management",
+                     "T3"="3. Elecciones",
+                     "T4"="4. Críticas",
+                     "T5"="5. Redes sociales")
 ```
 
 Es importante tener en cuenta que no siempre todos los tópicos presentarán un campo semántico coherente: en muchos casos pueden referir a regularidades propias del tipo de comunicación que estamos analizando (e.g., palabras que remiten a una interacción por parte del usuario, si es que estamos trabajando con contenido tomado de páginas interactivas), o una mixtura de palabras tal que el lugar de permitirnos inferir un campo unívoco, nos resulte incoherente.
 
 Luego, debemos organizar nuestros tópicos:
 
-* **¿Descartamos tópicos irrelevantes?**: Más allá de los tópicos incoherentes o para los que un campo semántico no es tan evidente, podemos decidir filtrar otros tópicos en vistas de su (ir)relevancia para nuestra pregunta teórica. En nuestro caso, todos los tópicos (con excepción del #2) parecen ser temas más amplios en los que el big data juega un rol con peso social. El caso del #2 es tal vez distinto, ya que parece ser un tópico que trata focalmente sobre el big data antes que sobre otro fenómeno que lo incluye.
+* **¿Descartamos tópicos irrelevantes?**: Más allá de los tópicos incoherentes o para los que un campo semántico no es tan evidente, podemos decidir filtrar otros tópicos en vistas de su (ir)relevancia para nuestra pregunta teórica. En nuestro caso, todos los tópicos parecen incluir aspectos sociales en los que el big data interviene
 
-* **¿Agrupar tópicos?**: Generalmente, en una codificación cualitativa, el proceso se repite iterativamente, haciendo inferencias cada vez más generales (mayor abstracción) y coordinadas (mayor coherencia), lo que nos permite pasar de los códigos a los temas y argumentos. El modelo LDA no tiene esa estructura jerárquica, pero nosotros podemos agrupar o colapsar tópicos en temáticas más generales. Esto es casi siempre necesario cuando trabajamos con un K elevado, o con otro algoritmo (como VEM). 
+* **¿Agrupar tópicos?**: Generalmente, en una codificación cualitativa, el proceso se repite iterativamente, haciendo inferencias cada vez más generales (mayor abstracción) y coordinadas (mayor coherencia), lo que nos permite pasar de los códigos a los temas y argumentos. El modelo LDA no tiene esa estructura jerárquica, pero nosotros podemos agrupar o colapsar tópicos en temáticas más generales. Esto es casi siempre necesario cuando trabajamos con un K elevado.
 
-### Análisis cualitativo de documentos
+### Análisis de contenido (muestreo cualitativo)
 
-Dados los objetivos de nuestra investigación -indagar las distintas maneras en que se tematiza al big data en la prensa-, no podemos quedarnos con estos resultados que, en el mejor de los casos, son una clasificación probable de los documentos. 
-Más bien, nos interesa hacer un *análisis de contenido* manual de algunos documentos que presenten estos tópicos [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación, teóricamente fundadas. 
-(Para el caso de nuestra investigación, se trata de describir cómo se introduce al big data en artículos periodísticos de distintos temas, especialmente, comparando las premisas y las promesas con las que se lo vincula. [@Becerra2019])
+Dados los objetivos de nuestra investigación -indagar las distintas maneras en que se tematiza al big data en la prensa-, no podemos quedarnos con estos resultados que, en el mejor de los casos, son una de tantas clasificación probables. Más bien, nos interesa hacer un *análisis de contenido* de los documentos en relación a cada tópico [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación.
 
-En este momento sólo usaremos R para construir la muestra de documentos a analizar manualmente en otro entorno. Generalmente para estas tareas se puede utilizar otro software destinado al análisis cualitativo (CAQDAS), como atlas.ti o nvivo. Existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/).
+Haremos dicho análisis de contenido en dos momentos:[^1] Primero, construyendo una muestra de documentos para analizarlos manualmente; y luego, evaluando la validez de nuestras interpretaciones, explorando los contenidos y metadatos.
 
-1. etiquetado manual y organización de los tópicos;
+[^1]: Nos mantenemos aquí en un diseño *pequeño*: cuando la investigación cuenta con recursos humanos suficientes se pueden plantear otros diseños más complejos, como la codificación manual de un segundo corpus de documentos (nuevos), que se usan para validar el modelo, entre otros experimentos de coherencia semántica (@Maier2018).
+
+
+El objetivo que perseguismo al hacer un análisis cualitativo en este momento de la exploración es comprender los contextos semánticos en los que se definen las palabras de nuestros tópicos. Para ello, conviene tener preguntas teóricamente guiadas, como por ejemplo: ¿con qué fines se asocia al big data? ¿se lo define explicitamente o se lo da por supuesto? ¿qué actores sociales están involucrados?
+
+En este momento sólo usaremos R para seleccionar documentos de cada tópico (construir una muestra) para su posterior análisis. 
+Trabajaremos estas muestras manualmente en otro entorno o software destinado al análisis cualitativo o  [CAQDAS](https://es.wikipedia.org/wiki/Programa_para_el_an%C3%A1lisis_cualitativo_asistido_por_computador). 
+(Aunque existe una implementación básica de una interfaz como la de otros CAQDAS en R: RDQA (R package for Qualitative Data Analysis), [https://rqda.r-forge.r-project.org/](https://rqda.r-forge.r-project.org/)).
+
+Una forma muy básica de construir esta muestra puede ser simplemente identificar aquellos documentos que tienen mayor probabilidad en cada tópico, a partir de `noticias_tm_gamma`. Asumamos que con 10 documentos podemos empezar nuestros análisis, aunque recordemos que en *muestreos teóricos* (cualitativos), este número no es fijo sino que se llega por un proceso de exploración:
+
+> El muestreo teórico se realiza para descubrir categorías y sus propiedades, y para sugerir las interrelaciones dentro de una teoría. El muestreo estadístico se realiza para obtener evidencia precisa sobre distribuciones de una población entre categorías, que pueden ser utilizadas en descripciones o verificaciones (Glaser y Strauss, 1967: 62). Por el muestreo teórico el investigador selecciona casos a estudiar según su potencial para ayudar a refinar o expandir los conceptos o teorías ya desarrollados. La «saturación teórica» significa que agregar nuevos casos no representará hallar información adicional por medio de la cual el investigador pueda desarrollar nuevas propiedades de las categorías. @Gialdino2006[^2]
+
+[^2]: Para una discusión de esta idea: @Martinez-Salgado2012
+
+```{r eval=FALSE, include=TRUE}
+noticias_tm_gamma %>% 
+  group_by(topic) %>%
+  slice_max(gamma, n=10)
+```
+
+Sin embargo, esto supondría un riesgo. Consideremos la manera en que se distribuye la probabilidad de cada tópico por documento, observando los primeros documentos de nuestro corpus:
+
+```{r}
+noticias_tm_gamma %>% filter(document %in% c(1:20)) %>%
+  ggplot(aes(x=document,y=gamma,label=topic,color=as.factor(topic))) +
+  geom_text(size=5, show.legend = FALSE) +
+  coord_flip()
+```
+
+En algunos documentos se observa una clara preminencia de un tópico, mientras que en otros esta distribución es más pareja (e.g., documentos #10 y #12). Si nos quedásemos sólo con el tópico que más alto puntúa en cada documento para asignarlos a una muestra, podríamos perder la chance de observar de qué manera algún tópico menos predominante se contextualiza. Para ello conviene construir nuestra muestra para que incluya tanto documentos con los valores más altos de afinidad, y otros seleccionados al azar que incluyan al tópico en un cierto umbral de relevancia. Esta es una decisión que deberemos considerar para otros momentos, como cuando evaluemos la validez.
+
+```{r eval=FALSE, include=TRUE}
+muestra_mixta_1 <- noticias_tm_gamma %>% 
+  group_by(topic) %>%
+  slice_max(gamma, n=5)
+muestra_mixta_2 <- noticias_tm_gamma %>% 
+  filter(gamma > 0.25) %>%
+  filter(!document %in% muestra_mixta_1$document) %>%
+  group_by(topic) %>%
+  slice_sample(n = 5)
+rbind(muestra_mixta_1, muestra_mixta_2)
+```
+
+### Validación
+
+En el momento de la validación proponemos hipótesis acerca del contenido de las noticias y su estructura, y las probamos para obtener más información que nos ayude a evaluar las conclusiones llegadas en el análisis cualitativo. 
+
+Podemos pensar en 2 grandes formas de validación:
+
+1. validación de hipótesis con contenidos y metadatos;
+2. validación estadística.
+
+El primero consiste en 
+
+
+
+```{r}
+
+# noticias %>%
+#   group_by(month = lubridate::floor_date(fecha, unit = "month")) %>%
+#   summarize(n=n()) %>%
+#   ggplot( aes(x = month, y = n, color=topic)) + 
+#   geom_line()+
+#   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+#   labs(x = "Publishing date", y = "News articles") + 
+#   theme_minimal() +
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.background = element_blank() ) +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+
+```
+
+
+DIVIDIR EN; 
+
 2. análisis cualitativo de los documentos;
 3. validación estadística y determinación de K;
 4. validación de metadatos contra supuestos;
 5. explorar relaciones entre tópicos;
 6. explorar relaciones y diferencias en los metadatos; 
 7. explorar relaciones y diferencias en los contenidos (usando lexicones).
+
+
+
+
+
+
 
 
 
