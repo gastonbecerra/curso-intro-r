@@ -280,6 +280,8 @@ rbind(muestra_mixta_1, muestra_mixta_2)
 
 En el momento de la validación proponemos hipótesis acerca del contenido de las noticias y su estructura, y las probamos para obtener más información que nos ayude a evaluar las conclusiones llegadas en el análisis cualitativo. 
 
+Hay diversas formas de validación 
+
 Podemos pensar en 2 grandes formas de validación:
 
 1. validación de hipótesis con contenidos y metadatos;
@@ -384,7 +386,7 @@ topicos_documentos %>%
   write.table(file=paste0("noticias_links_topicos_",k_topics,"_topicos.txt") , row.names = FALSE , quote = FALSE , col.names = TRUE , sep = "|")
 
 
-### Validación estadística y determinación de K
+<!-- ### Validación estadística y determinación de K -->
 
 NO SON CONFIABLES, NO SE CORRESPONDEN CON HUMANOS
 
@@ -401,7 +403,7 @@ The quality of the model is assessed by computing its perplexity, i.e. a metric 
 comparing measurements of semantic coherence of topics (see eq. 3.15) as an additional hint to identify overly broad or incoherent topics, and
 
 
-### Comparar tópicos
+<!-- ### Comparar tópicos -->
 
 
 <!-- # CALCULO DISTANCIA ENTRE LOS VOCABULARIOS DE CADA TOPICO -->
@@ -431,7 +433,7 @@ rm(lqs, topic_scores_corr)
 
 
 
-### Buscar variaciones en metadatos ()
+<!-- ### Buscar variaciones en metadatos () -->
 
 fecha: hay hechos relevantes?
 
@@ -450,7 +452,7 @@ noticias_tm_gamma %>%
 
 
 
-### Buscar variaciones en contenidos (lexicones)
+<!-- ### Buscar variaciones en contenidos (lexicones) -->
 
 
 <!-- # % articulos que dicen "big data" en los primeros 200 x topico -->
