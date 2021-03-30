@@ -21,15 +21,20 @@ glimpse(noticias_para_anotar)
 
 # elegir 5 fuentes y cortar 20 de cada uno
 noticias_para_anotar <- readRDS("./data_ignore/noticiasLimpias_2026_20191018_130620.rda") %>%
-  filter(!is.na(fecha)) %>%
   select(id=noticia_id, fecha, titulo=items.title, txt=text, fuente=items.displayLink ) %>% 
+  distinct(titulo, .keep_all = TRUE) %>%
   filter(fuente %in% 
-           c("www.clarin.com", "www.iprofesional.com", "www.pagina12.com.ar", "tn.com.ar", "www.telam.com.ar"),
-         !is.na(txt)) %>%
-  group_by(fuente) %>% sample_n(20) %>%
-  ungroup() %>%
-  saveRDS(file = "data/noticias_curso.rds")
+           c("www.clarin.com", "www.infobae.com", "www.pagina12.com.ar", "www.lanacion.com.ar"),
+         !is.na(txt),
+         !is.na(fecha)
+  ) %>%
+  group_by(fuente) %>% sample_n(25) %>%
+  ungroup() 
 
+glimpse(noticias_para_anotar)
+table(noticias_para_anotar$fuente)
+
+noticias_para_anotar %>% saveRDS(file = "data/noticias_curso.rds")
 ```
 
 ```{r echo=TRUE, message=TRUE, warning=FALSE}
@@ -64,7 +69,7 @@ noticias_anotadas <- udpipe_annotate(
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 # guardamos el parseado
-# readr::write_csv(x = noticias_anotadas, file = "data_ignore/noticias_anotadas.csv")
+# readr::write_csv(x = noticias_anotadas, path = "data_ignore/noticias_anotadas.csv")
 
 # tomamos el parseado
 noticias_anotadas <- readr::read_csv(file = "data_ignore/noticias_anotadas.csv")
@@ -74,12 +79,14 @@ Al igual que en el capítulo anterior, usaremos la información de `upos` para f
 Aquí omitimos los adverbios, ya que no nos interesan las posibles modificaciones del sentido entre palabras cercanas, como negaciones o amplificaciones.
 Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`. Además, incluimos un conjunto de verbos ad-hoc para ser eliminados.
 
-```{r}
+```{r warning=FALSE}
+library(stopwords)
 noticias_anotadas2 <- noticias_anotadas %>% 
   filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN") %>% # filtramos por tipo de palabra
   select( doc_id, lemma ) %>% # seleccionamos solo las columnas que nos interesan, esto no es necesario
   filter(!lemma %in% stopwords::stopwords(language = "es")) %>% # filtrar las que no están en la tabla de stopwords
-  filter(!lemma %in% c("ser", "decir", "tener", "haber", "estar", "hacer", "ver", "leer")) # filtramos verbos muy comunes
+  filter(!lemma %in% c("ser", "decir", "tener", "haber", "estar", "hacer", "ver", "leer","comentar","ir")) %>% # filtramos verbos muy comunes
+  filter(!lemma %in% c("año","dia","vez")) # filtramos palabras típicas del género de los documentos
 glimpse(noticias_anotadas2)
 ```
 
@@ -89,7 +96,7 @@ Comúnmente, los modelos de *machine learning* son entrenados con datos estructu
 
 Supongamos que tenemos dos documentos con una oración cada uno: `El big data es el conjunto de técnicas que las grandes corporaciones analizan para manipular nuestro pensamiento en función de sus intereses privados` y `Google analiza big data para inferir el ritmo de contagio de la gripe H1N1`, que en su forma lemmatizada y filtrada serían `bigdata ser conjunto tecnica grande corporacion analizar manipular pensamiento funcion interes privado` y `google analizar bigdata inferir ritmo contagio gripe h1n1`.
  
-Veamos cómo se vería estas oraciones vectorizadas:
+Veamos cómo se vería estas oraciones vectorizadas (las primeras palabras):
 
 ```{r eval=TRUE, echo=FALSE}
 data.frame(
@@ -101,9 +108,7 @@ data.frame(
        grande = c(1L, 0L),
   corporacion = c(1L, 0L),
      analizar = c(1L, 1L),
-    manipular = c(1L, 0L),
-      inferir = c(0L, 1L),
-         n... = c(NA, NA)
+    manipular = c(1L, 0L)
 )
 ```
 
@@ -143,8 +148,12 @@ A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los
 Vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
 
 ```{r eval=F, echo=T}
-k_topics <- 5 # numero de topicos
-noticias_tm <- topicmodels::LDA(noticias_dtm, k = k_topics, method = "Gibbs", control = list(seed = 1:3, nstart=3, verbose=1000))
+k_topics <- 6 # numero de topicos
+noticias_tm <- topicmodels::LDA(
+  noticias_dtm, # vector de terminos por documentos
+  k = k_topics, # cantidad de topicos
+  method = "Gibbs", # metodo de sampleo de los documentos
+  control = list(seed = 1:5, nstart=5, verbose=1000))
 ```
 
 ```{r eval=T, echo=F}
@@ -202,20 +211,24 @@ El objetivo del análisis que haremos (manualmente) sobre estos datos es el de e
 
 Veamos esto con nuestros datos, tendiendo en mente el criterio de construcción del corpus (noticias que incluyen "big data"):
 
-* Tópico 1: digital, país, desarrollo, tecnología, presidente nos permiten asumir que se trata de noticias que vinculan al big data con política tecnológica;
-* Tópico 2: dato, bigdata, empresa, sector, herramienta, decisión, nos permite suponer que en las noticias se trate al bigdata como una herramienta para de gestión;
-* Tópico 3: campañana, político, público, elección nos permiten inferir el campo de las elecciones políticas;
-* Tópico 4: humano, mismo, tiempo, vida, máquina son expresiones esperables en artículos críticos de los avances tecnológicos;
-* Tópico 5: información, dato, bigdata, usuario, empresa, internet son nociones que nos remiten a redes sociales y plataformas. Esta es una interpretación (hipotética) de las palabras en relación a los conceptos de la datificación y el big data social [@VanDijck2014].
+* Tópico 1: dato, información, empresa, usuario, millón, personas e internet son nociones que nos remiten a redes sociales y plataformas. Esta es una interpretación (hipotética) de las palabras en relación a los conceptos de la datificación y el big data social [@VanDijck2014];
+* Tópico 2: campañana, político, gobierno, elección nos permiten inferir el campo de las elecciones políticas;
+* Tópico 3: bigdata, saber, entender, tiempo, estadística y conocimiento nos permiten suponer que se trata de la "promesa epistémica" del big data, es decir, de su vinculación con la generación de conocimiento novedoso [@Becerra2018];
+* Tópico 4: vida, mismo, nuevo, humano son expresiones esperables en artículos críticos de los avances tecnológicos;
+* Tópico 5: negocio, tecnología, trabajo, innovación son términos que podrían corresponder a noticias sobre el mercado laboral y las empresas;
+* Tópico 6: equipo, tiempo, sensor, ciudad no parece permitirnos inferir un campo semántico muy coherente sino más bien un conjunto de artículos de áreas diversas en las que ha impactado la datificación.
 
 Vamos a escribir estas etiquetas en un array de nombres de tópicos, por si necesitamos incluirlos en futuros gráficos como etiquetas:
 
 ```{r}
-topicos_nombres <- c("T1"="1. Pol. tecnológica",
-                     "T2"="2. Management",
-                     "T3"="3. Elecciones",
-                     "T4"="4. Críticas",
-                     "T5"="5. Redes sociales")
+topicos_nombres <- rbind( 
+  c(topic = 1 , nombre = "1. Redes sociales"),
+  c(topic = 2 , nombre = "2. Elecciones"),
+  c(topic = 3 , nombre = "3. Conocimiento"),
+  c(topic = 4 , nombre = "4. Críticas"),
+  c(topic = 5 , nombre = "5. Negocios y trabajo"),
+  c(topic = 6 , nombre = "6. Datificación")
+) %>% as_tibble() %>% mutate(topic=as.integer(topic))
 ```
 
 Es importante tener en cuenta que no siempre todos los tópicos presentarán un campo semántico coherente: en muchos casos pueden referir a regularidades propias del tipo de comunicación que estamos analizando (e.g., palabras que remiten a una interacción por parte del usuario, si es que estamos trabajando con contenido tomado de páginas interactivas), o una mixtura de palabras tal que el lugar de permitirnos inferir un campo unívoco, nos resulte incoherente.
@@ -234,8 +247,7 @@ Haremos dicho análisis de contenido en dos momentos:[^1] Primero, construyendo 
 
 [^1]: Nos mantenemos aquí en un diseño *pequeño*: cuando la investigación cuenta con recursos humanos suficientes se pueden plantear otros diseños más complejos, como la codificación manual de un segundo corpus de documentos (nuevos), que se usan para validar el modelo, entre otros experimentos de coherencia semántica (@Maier2018).
 
-
-El objetivo que perseguismo al hacer un análisis cualitativo en este momento de la exploración es comprender los contextos semánticos en los que se definen las palabras de nuestros tópicos. Para ello, conviene tener preguntas teóricamente guiadas, como por ejemplo: ¿con qué fines se asocia al big data? ¿se lo define explicitamente o se lo da por supuesto? ¿qué actores sociales están involucrados?
+El objetivo que perseguismos al hacer un análisis cualitativo en este momento de la exploración es comprender los contextos semánticos en los que se definen las palabras de nuestros tópicos. Para ello, conviene tener preguntas teóricamente guiadas, como por ejemplo: ¿con qué fines se asocia al big data? ¿se lo define explicitamente o se lo da por supuesto? ¿qué actores sociales están involucrados?
 
 En este momento sólo usaremos R para seleccionar documentos de cada tópico (construir una muestra) para su posterior análisis. 
 Trabajaremos estas muestras manualmente en otro entorno o software destinado al análisis cualitativo o  [CAQDAS](https://es.wikipedia.org/wiki/Programa_para_el_an%C3%A1lisis_cualitativo_asistido_por_computador). 
@@ -269,43 +281,55 @@ muestra_mixta_1 <- noticias_tm_gamma %>%
   group_by(topic) %>%
   slice_max(gamma, n=5)
 muestra_mixta_2 <- noticias_tm_gamma %>% 
-  filter(gamma > 0.25) %>%
+  filter(gamma > 0.2) %>% # definimos el umbral
   filter(!document %in% muestra_mixta_1$document) %>%
   group_by(topic) %>%
   slice_sample(n = 5)
-rbind(muestra_mixta_1, muestra_mixta_2)
+muestra_mixta <- rbind(muestra_mixta_1, muestra_mixta_2)
 ```
 
 ### Validación
 
 En el momento de la validación proponemos hipótesis acerca del contenido de las noticias y su estructura, y las probamos para obtener más información que nos ayude a evaluar las conclusiones llegadas en el análisis cualitativo. 
 
-Hay diversas formas de validación 
-
-Podemos pensar en 2 grandes formas de validación:
+Hay diversas formas de validación pero podemos agruparlas en 2: 
 
 1. validación de hipótesis con contenidos y metadatos;
 2. validación estadística.
 
-El primero consiste en 
+La validación de hipótesis con contenido y metadatos (también llamada validación semántica intratópico y externa, respectivamente) consiste en hipotetizar cierta información presente en nuestros datos para explorar desde nuestro modelo. 
 
+Por ejemplo, en nuestra base de `noticias` tenemos algunos meta-datos (como la fecha de publicación de los artículos) con información que nuestro modelo no analizó, de modo que podríamos usarlos para evaluar su coherencia. Para ello, pensemos en 
 
+noticias_tm_beta %>% # principales términos en cada tópico
+  group_by(topic) %>%
+  top_n(15) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>% # vamos a mostrarlo como grafico
+  ggplot(aes(x=reorder(term, (beta)),y=beta)) + 
+    geom_col() +
+    facet_wrap(~topic, scales = "free_y") +
+  coord_flip()
+
+Para ello, debemos volver a seleccionar las noticias más representativas de un tópico y 
 
 ```{r}
-
-# noticias %>%
-#   group_by(month = lubridate::floor_date(fecha, unit = "month")) %>%
-#   summarize(n=n()) %>%
-#   ggplot( aes(x = month, y = n, color=topic)) + 
-#   geom_line()+
-#   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-#   labs(x = "Publishing date", y = "News articles") + 
-#   theme_minimal() +
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-#         panel.background = element_blank() ) +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-
-
+noticias_tm_gamma %>%
+  filter(
+    gamma > 0.2 # vamos a incluir a todas las noticias con este % de relevancia
+    ) %>% 
+  mutate(
+    id=as.integer(document),
+    topic=as.integer(topic)
+    ) %>%
+  left_join(x = ., y = noticias, by="id") %>%
+  left_join(topicos_nombres, by="topic")  %>%
+  group_by(nombre, month = lubridate::floor_date(fecha, unit = "month")) %>%
+  summarize(n=n()) %>%
+  ggplot( aes(x = month, y = n, color=nombre)) +
+  geom_line()+
+  scale_x_date(date_breaks = "3 months", date_labels = "%m/%y") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
 
 
