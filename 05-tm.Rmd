@@ -37,7 +37,7 @@ table(noticias_para_anotar$fuente)
 noticias_para_anotar %>% saveRDS(file = "data/noticias_curso.rds")
 ```
 
-```{r echo=TRUE, message=TRUE, warning=FALSE}
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 library(tidyverse) # para manipular en general
 library(tidytext) # para convertir los objetos a formatos requeridos / devueltos por LDA
 
@@ -79,7 +79,7 @@ Al igual que en el capítulo anterior, usaremos la información de `upos` para f
 Aquí omitimos los adverbios, ya que no nos interesan las posibles modificaciones del sentido entre palabras cercanas, como negaciones o amplificaciones.
 Además introduciremos otro filtro: eliminaremos palabras muy comunes en el lenguaje, que dificilmente puedan ayudarnos a identificar un campo semántico. Para eso recurrimos a un diccionario de palabras comunes, del pack `stopwords`, y eliminaremos esos registros con `filter`. Además, incluimos un conjunto de verbos ad-hoc para ser eliminados.
 
-```{r warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 library(stopwords)
 noticias_anotadas2 <- noticias_anotadas %>% 
   filter(upos=="ADJ"| upos=="VERB"| upos=="NOUN") %>% # filtramos por tipo de palabra
@@ -138,6 +138,10 @@ El objeto tipo `DocumentTermMatrix` nos informa la cantidad de documentos y la c
 
 Para construir los tópicos usaremos el modelo Latent Dirichlet Allocation, a través del pack `topicmodels`. Este modelo genera *tópicos* proponiendo una cierta distribución de todas las palabras del corpus, y calcula la distribución de estos tópicos en cada documentos. 
 
+En términos gráficos (@Blei2012): 
+
+![LDA](images/blei2012.png)
+
 Lo interesante de esta manera de operativizar los temas, es que cada tópico puede ser entendido como un campo semántico, un conjunto de palabras que suelen correlacionar en distintos documentos. Luego, en el momento del análisis de estos resultados, buscaremos inferir un tema a partir de las palabras que más contribuyen a cada tópico. E.g., podríamos inferir de un tópico en el que contribuyen fuertemente los términos "venta", "producto" y "comprador" al tema "comercio".
 Según uno de los autores del modelo, la interpretabilidad de la mayoría de los temas es el resultado de “la estructura estadística del lenguaje y cómo interactúa con los supuestos probabilísticos específicos de LDA” (D. Blei, 2012, p. 79). 
 
@@ -148,6 +152,7 @@ A la vez, las palabras no son exclusivas de un tópico sino que cruzan todos los
 Vamos a construir el modelo con la función `LDA`. Una decisión importante, que debe ser introducida como un parámetro para realizar los análisis, es el número de tópicos a generar. Empecemos por un número criterioso, rápido para testear, y fácil de examinar, y volvamos sobre este problema.
 
 ```{r eval=F, echo=T}
+library(topicmodels)
 k_topics <- 6 # numero de topicos
 noticias_tm <- topicmodels::LDA(
   noticias_dtm, # vector de terminos por documentos
@@ -188,6 +193,11 @@ Los resultados arrojados por el modelo pueden ser útiles para inferir tópicos.
 3. validación;
 
 Al igual que en los diseños cualitativos debemos tener en consideración 2 cuestiones: (1) que las distintas tareas y momentos del análisis no son secuenciales sino más bien iterativos, y que constantemente iremos tomando decisiones que afectan (hacia adelante) y que informan (hacia atras) a otros momentos; (2) que todas estas decisiones serán mas claras y robustas si son producto del consenso entre distintos analistas que trabajan en forma autónoma y que documentan e intercambian la razones de sus decisiones [@Auerbach2003]. 
+No obstante, para todos los momentos que siguen vamos a asumir una *escala pequeña* de investigación, es decir, donde las tareas puedan ser llevadas por 1 solo investigador. Cuando la investigación cuenta con recursos (humanos) suficientes se pueden plantear estrategias mucho más complejas para cada momento[^1], generando así resultados más confiables y robustos. 
+
+[^1]: Por ejemplo, @Chang2009 diseñaron una serie de pruebas (humanas) rápidas para evaluar la coherencia de los tópicos, como por ejemplo, incluir términos extraños en un tópico para ver si un interprete podía identificarlo. Si te interesa esto, no te pierdas [la presentación de los autores](https://www.youtube.com/watch?v=ZQLiDh1NJK4&list=UUIXpjlxPL5Ow8rPO_gOHISQ&index=83).
+
+<!-- 2do: reseñar estrategias mas chetas con experimentos y evaluacion de topicos -->
 
 ### Etiquetado manual y organización de los tópicos
 
@@ -231,7 +241,7 @@ topicos_nombres <- rbind(
 ) %>% as_tibble() %>% mutate(topic=as.integer(topic))
 ```
 
-Es importante tener en cuenta que no siempre todos los tópicos presentarán un campo semántico coherente: en muchos casos pueden referir a regularidades propias del tipo de comunicación que estamos analizando (e.g., palabras que remiten a una interacción por parte del usuario, si es que estamos trabajando con contenido tomado de páginas interactivas), o una mixtura de palabras tal que el lugar de permitirnos inferir un campo unívoco, nos resulte incoherente.
+Es importante tener en cuenta que no siempre todos los tópicos presentarán un campo semántico coherente: en muchos casos pueden referir a regularidades propias del tipo de comunicación que estamos analizando (e.g., palabras que remiten a una interacción por parte del usuario, si es que estamos trabajando con contenido tomado de páginas interactivas), o una mixtura de palabras tal que en lugar de permitirnos inferir un campo unívoco, nos resulte incoherente.
 
 Luego, debemos organizar nuestros tópicos:
 
@@ -241,13 +251,7 @@ Luego, debemos organizar nuestros tópicos:
 
 ### Análisis de contenido (muestreo cualitativo)
 
-Dados los objetivos de nuestra investigación -indagar las distintas maneras en que se tematiza al big data en la prensa-, no podemos quedarnos con estos resultados que, en el mejor de los casos, son una de tantas clasificación probables. Más bien, nos interesa hacer un *análisis de contenido* de los documentos en relación a cada tópico [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación.
-
-Haremos dicho análisis de contenido en dos momentos:[^1] Primero, construyendo una muestra de documentos para analizarlos manualmente; y luego, evaluando la validez de nuestras interpretaciones, explorando los contenidos y metadatos.
-
-[^1]: Nos mantenemos aquí en un diseño *pequeño*: cuando la investigación cuenta con recursos humanos suficientes se pueden plantear otros diseños más complejos, como la codificación manual de un segundo corpus de documentos (nuevos), que se usan para validar el modelo, entre otros experimentos de coherencia semántica (@Maier2018).
-
-El objetivo que perseguismos al hacer un análisis cualitativo en este momento de la exploración es comprender los contextos semánticos en los que se definen las palabras de nuestros tópicos. Para ello, conviene tener preguntas teóricamente guiadas, como por ejemplo: ¿con qué fines se asocia al big data? ¿se lo define explicitamente o se lo da por supuesto? ¿qué actores sociales están involucrados?
+Dados los objetivos de nuestra investigación -indagar las distintas maneras en que se tematiza al big data en la prensa-, no podemos quedarnos con estos resultados que, en el mejor de los casos, son una de tantas clasificación probables. Más bien, nos interesa hacer un *análisis de contenido* de los documentos en relación a cada tópico [@Krippendorff2004], no sólo para aclarar las etiquetas dadas, sino también para responder a nuestras preguntas de investigación. Este tipo de análisis, en este momento de la exploración, nos permitirá comprender los contextos semánticos en los que se definen las palabras de nuestros tópicos. Para ello, conviene tener preguntas teóricamente guiadas, como por ejemplo: ¿con qué fines se asocia al big data? ¿se lo define explicitamente o se lo da por supuesto? ¿qué actores sociales están involucrados?
 
 En este momento sólo usaremos R para seleccionar documentos de cada tópico (construir una muestra) para su posterior análisis. 
 Trabajaremos estas muestras manualmente en otro entorno o software destinado al análisis cualitativo o  [CAQDAS](https://es.wikipedia.org/wiki/Programa_para_el_an%C3%A1lisis_cualitativo_asistido_por_computador). 
@@ -274,7 +278,7 @@ noticias_tm_gamma %>% filter(document %in% c(1:20)) %>%
   coord_flip()
 ```
 
-En algunos documentos se observa una clara preminencia de un tópico, mientras que en otros esta distribución es más pareja (e.g., documentos #10 y #12). Si nos quedásemos sólo con el tópico que más alto puntúa en cada documento para asignarlos a una muestra, podríamos perder la chance de observar de qué manera algún tópico menos predominante se contextualiza. Para ello conviene construir nuestra muestra para que incluya tanto documentos con los valores más altos de afinidad, y otros seleccionados al azar que incluyan al tópico en un cierto umbral de relevancia. Esta es una decisión que deberemos considerar para otros momentos, como cuando evaluemos la validez.
+En algunos documentos se observa una clara preminencia de un tópico, mientras que en otros esta distribución es más pareja (e.g., documentos #10 y #12). Si nos quedásemos sólo con el tópico que más alto puntúa en cada documento para asignarlos a una muestra, podríamos perder la chance de observar de qué manera algún tópico menos predominante se contextualiza. Para ello conviene construir nuestra muestra para que incluya tanto documentos con los valores más altos de afinidad, y otros seleccionados al azar que incluyan al tópico en un cierto umbral de relevancia. Esta es una decisión que deberemos considerar para otros momentos en los que querramos referir al conjunto de documentos que creemos relevante para un tópico.
 
 ```{r eval=FALSE, include=TRUE}
 muestra_mixta_1 <- noticias_tm_gamma %>% 
@@ -290,41 +294,31 @@ muestra_mixta <- rbind(muestra_mixta_1, muestra_mixta_2)
 
 ### Validación
 
-En el momento de la validación proponemos hipótesis acerca del contenido de las noticias y su estructura, y las probamos para obtener más información que nos ayude a evaluar las conclusiones llegadas en el análisis cualitativo. 
+En el momento de la validación se busca indagar cuán sólida es nuestra interpretación de los datos. 
 
 Hay diversas formas de validación pero podemos agruparlas en 2: 
 
 1. validación de hipótesis con contenidos y metadatos;
-2. validación estadística.
+2. validación estadística;
 
-La validación de hipótesis con contenido y metadatos (también llamada validación semántica intratópico y externa, respectivamente) consiste en hipotetizar cierta información presente en nuestros datos para explorar desde nuestro modelo. 
+La validación de hipótesis con contenido y metadatos (también llamada validación semántica intratópico y externa, respectivamente) consiste en hipotetizar cierta información presente en nuestros datos o metadatos, generalmente no analizados por nuestro modelo, para explorarla con los resultados del modelo. 
 
-Por ejemplo, en nuestra base de `noticias` tenemos algunos meta-datos (como la fecha de publicación de los artículos) con información que nuestro modelo no analizó, de modo que podríamos usarlos para evaluar su coherencia. Para ello, pensemos en 
+Por ejemplo, en nuestra base de `noticias` tenemos algunos meta-datos con información que nuestro modelo no analizó  (como la fecha de publicación de los artículos o sus títulos), de modo que podríamos usarlos para evaluar su coherencia. Naturalmente, esto deja muchas definiciones de criterios en manos del investigador y lo compromete a justificar sus decisiones. 
 
-noticias_tm_beta %>% # principales términos en cada tópico
-  group_by(topic) %>%
-  top_n(15) %>%
-  ungroup() %>%
-  arrange(topic, -beta) %>% # vamos a mostrarlo como grafico
-  ggplot(aes(x=reorder(term, (beta)),y=beta)) + 
-    geom_col() +
-    facet_wrap(~topic, scales = "free_y") +
-  coord_flip()
+<!-- Ciertamente, esta forma de buscar validez para nuestros análisis se enfrenta a problemas parecidos a los cuali, donde una interpretacion es posible entre varias -->
 
-Para ello, debemos volver a seleccionar las noticias más representativas de un tópico y 
-
-```{r}
+```{r fig.height=3, fig.width=7, message=FALSE, warning=FALSE}
 noticias_tm_gamma %>%
   filter(
     gamma > 0.2 # vamos a incluir a todas las noticias con este % de relevancia
     ) %>% 
   mutate(
-    id=as.integer(document),
+    id=as.integer(document), # modificamos los nombres de columnas para dp hacer join
     topic=as.integer(topic)
     ) %>%
-  left_join(x = ., y = noticias, by="id") %>%
-  left_join(topicos_nombres, by="topic")  %>%
-  group_by(nombre, month = lubridate::floor_date(fecha, unit = "month")) %>%
+  left_join(x = ., y = noticias, by="id") %>% # agregamos los metadatos de noticias
+  left_join(topicos_nombres, by="topic")  %>% # agregamos los nombres de los topicos
+  group_by(nombre, month = lubridate::floor_date(fecha, unit = "month")) %>% # agrupamos las noticias por meses
   summarize(n=n()) %>%
   ggplot( aes(x = month, y = n, color=nombre)) +
   geom_line()+
@@ -332,120 +326,49 @@ noticias_tm_gamma %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 ```
 
+Por caso, en relación al tópico de las elecciones políticas, vemos un pico de noticias en los últimos meses de 2017 y principios del 2018, en el que se desarrollaron las [elecciones legislativas argentinas](https://es.wikipedia.org/wiki/Elecciones_legislativas_de_Argentina_de_2017) y se conoció la explotación de datos de [Facebook por parte de Cambridge Analytica](https://es.wikipedia.org/wiki/Cambridge_Analytica#Campa%C3%B1a_de_Mauricio_Macri). Se debe notar que aquí introducimos un nuevo supuesto: que la manera en que hemos construído nuestra muestra habilita a un análisis de frecuencia.
 
-DIVIDIR EN; 
+A la vez, este momento de validación puede dar inicio a exploraciones heurísticas muy interesantes. Por ejemplo, en nuestra investigación sobre el tratamiento del big data por parte de la prensa digital, buscamos comparar el tratamiento del big data a través de estos tópicos en 3 niveles: artículos, oraciones que incluían los términos "big data", y las fotos que acompañaban el artículo. 
 
-2. análisis cualitativo de los documentos;
-3. validación estadística y determinación de K;
-4. validación de metadatos contra supuestos;
-5. explorar relaciones entre tópicos;
-6. explorar relaciones y diferencias en los metadatos; 
-7. explorar relaciones y diferencias en los contenidos (usando lexicones).
+```{r eval=FALSE, include=FALSE}
+noticias_tm_gamma %>%
+  filter(
+    topic==2,
+    gamma > 0.2 # vamos a incluir a todas las noticias con este % de relevancia
+    ) %>% 
+  mutate(
+    id=as.integer(document), # modificamos los nombres de columnas para dp hacer join
+    topic=as.integer(topic)
+    ) %>%
+  left_join(x = ., y = noticias, by="id") %>% # agregamos los metadatos de noticias
+  left_join(topicos_nombres, by="topic")  %>%
+  arrange(desc(gamma)) %>%
+  select(titulo,fecha,fuente)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- # ESTABLEZCO UN CRITERIO DE CORTE PARA LAS MUESTRAS DE DOCUMENTOS POR TOPICOS -->
-
-table(topicos_documentos$topic_label) # distribucion en topicos (rank1)
-corte_rank1<-mean(topicos_documentos$topic_prob) # valor medio de rank1
-corte_rank2<-mean(topicos_documentos$topic_probdiff_2nd) # valor medio de diferencia con rank2
-corte <- mean(topicos_documentos$topic_prob) - mean(topicos_documentos$topic_probdiff_2nd) # valor de corte?
-
-x<-topicos_documentos_tidy %>% filter(score>corte_rank2) %>% group_by(topic) %>% tally(sort = TRUE) # %>% summarise(q=mean(n),s=sd(n))
-x$topic
-x$n
-mean(x$n);sd(x$n);sd(x$n)/mean(x$n)
-
-x$n / nrow(noticias_scrap_y_metadata) * 100
-  
-  
-
-topicos_documentos_graficos <- topicos_documentos_tidy %>% # una tabla auxiliar para simplificar los graficos
-  mutate(topic_name = gsub(pattern = "topic_", replacement = "", topic )) %>%
-  mutate(topic_id = as.integer(stringi::stri_match_first_regex(topic_name, "(.*?)\\.")[,1]))
-
-topicos_documentos_graficos %>% # distribucion documentos por topicos con cortes
-  ggplot(aes(y=score,x=topic_name)) + 
-  geom_boxplot() + 
-  geom_hline(color="red", yintercept = corte ) + # media de rank1 - diferencia con rank2
-  geom_hline(color="blue", yintercept = corte_rank1 ) + # rank1
-  geom_hline(color="blue", yintercept = corte_rank2 ) + # rank2
+# document x topicos x fuentes
+noticias_tm_gamma %>%
+  filter(
+    topic == 2,
+    gamma > 0.2 # vamos a incluir a todas las noticias con este % de relevancia
+    ) %>% 
+  mutate(
+    id=as.integer(document), # modificamos los nombres de columnas para dp hacer join
+    topic=as.integer(topic)
+    ) %>%
+  left_join(x = ., y = noticias, by="id") %>%
+  left_join(topicos_nombres, by="topic") %>%
+  ggplot(aes(y=gamma,x=nombre, label=id)) + 
+  geom_label()+
+  facet_wrap(~fuente) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))+
   scale_y_continuous("topic score", breaks = seq(0,1,0.1))
+```
 
-<!-- # ARMO UNA TABLA CON TOPICOS, TERMINOS, Y SCORES (RANK1 Y CORTE) -->
+<!-- 2do: RELACIONES ENTRE TOPICOS -->
 
-rank_corte <- as.data.frame(topicos_nombres) %>% # primero armo una tabla con la cantidad de documentos dentro de ese valor de corte ...
-  rename(topic_name=topicos_nombres) %>%
-  right_join( topicos_documentos_graficos %>% 
-    filter(! topic_id %in% topicos_desechados ) %>%
-    group_by(topic_name) %>% filter(score > corte) %>% summarize(corte=n()) ) %>% 
-  inner_join( # ... y ahora le sumo el rank1 ...
-    as.data.frame(table(topicos_documentos$topic_label)) %>% transform(topic_name=as.character(Var1)) %>% 
-      rename(Rank1=Freq) %>% select(topic_name,Rank1) 
-  )
-terminos_rank <- rank_corte %>% transform(topic=as.integer(gsub("\\..*","",topic_name))) %>% inner_join(topicos_palabra_top) # ... y ahora le sumo las palabras ...
-write.csv( terminos_rank, file = paste0("terminos_rank_", topicos_K, "topics", "_",format(Sys.time(), "%Y%m%d_%H%M%S"), ".csv")) # ... y lo exporto
+```{r eval=FALSE, include=FALSE}
+# CORRELACIONES DE TOPICOS (por distribucion basica en documentos)
 
-<!-- # EXPORTO UNA TABLA DE LINKS A NOTICIAS POR TOPICO (PARA LOS ANALISIS CUALI ES MAS COMODO LEER DESDE LA FUENTE) -->
-
-noticias_para_anotar <- readRDS("noticiasLimpias_2026_20191003_175315.rda")
-topicos_documentos %>% 
-  select(doc_id, topic, topic_prob, topic_label) %>%
-  left_join( noticias_para_anotar %>% select( doc_id, items.link )) %>%
-  write.table(file=paste0("noticias_links_topicos_",k_topics,"_topicos.txt") , row.names = FALSE , quote = FALSE , col.names = TRUE , sep = "|")
-
-
-<!-- ### Validación estadística y determinación de K -->
-
-NO SON CONFIABLES, NO SE CORRESPONDEN CON HUMANOS
-
-5 Discussion
-We presented the first validation of the assumed coherence and relevance of topic models using human experiments. For three topic models, we demonstrated that traditional metrics do not capture whether topics are coherent or not. Traditional metrics are, indeed, negatively correlated with the measures of topic quality developed in this paper. Our measures enable new forms of model selection and suggest that practitioners developing topic models should thus focus on evaluations that depend on real-world task performance rather than optimizing likelihood-based measures.
-
-Chang, J., Boyd-Graber, J., Gerris, S., Wang, C., & Blei, D. (2009). Reading Tea Leaves: How Humans Interpret Topic Models. Neural Information Processing Systems.
-
-The quality of the model is assessed by computing its perplexity, i.e. a metric based on the probability of the documents held out for evaluation. Hyperparameter settings then can also be optimized according to highest held out likelihood (Wallach et al., 2009). Although likelihood evaluation is widely used due to its pure automatic nature, Chang et al. (2009) have proven with large user studies that optimal held out likelihood does not correspond to human perception of semantic coherence of topics.
-
-
-
-
-comparing measurements of semantic coherence of topics (see eq. 3.15) as an additional hint to identify overly broad or incoherent topics, and
-
-
-<!-- ### Comparar tópicos -->
-
-
-<!-- # CALCULO DISTANCIA ENTRE LOS VOCABULARIOS DE CADA TOPICO -->
-
-topicos_palabra_phi <- as.data.frame(t( topicos_palabra_tidy %>% spread(key = topic, value = beta) )) # en lo que sigue preparo phi, para calcular Hellinger
-colnames(topicos_palabra_phi) <- as.vector( t( topicos_palabra_phi[1,] ))
-topicos_palabra_phi <- topicos_palabra_phi[-1,] 
-rownames(topicos_palabra_phi[-topicos_desechados,]) <- topicos_nombres[-topicos_desechados]
-topicos_palabra_phi <- as.matrix(topicos_palabra_phi)
-topicos_palabra_phi <- type.convert(topicos_palabra_phi)
-hc_vocabulario<-hclust(as.dist(textmineR::CalcHellingerDist(topicos_palabra_phi[-topicos_desechados,])), "ward.D")
-plot(hc_vocabulario,labels = topicos_nombres[-topicos_desechados], sub = "", main = "" , xlab = "Topics")
-rm(topicos_palabra_phi,hc_vocabulario)
-
-
-<!-- # CORRELACIONES DE TOPICOS (por distribucion basica en documentos) -->
-
-lqs<-setdiff((1:25+5),(topicos_desechados+5))
 topic_scores_corr <-  cor( topicos_documentos[lqs] , method = "pearson") # correlacion entre topicos asignados a articulos
 ggcorrplot::ggcorrplot(topic_scores_corr, outline.col = "white", show.legend = FALSE,
                        type = "lower", colors = colorRampPalette(c("red","white","green"))(3),
@@ -454,33 +377,12 @@ ggcorrplot::ggcorrplot(topic_scores_corr, outline.col = "white", show.legend = F
 ggsave(filename = "graficos/correlaciones.jpg",width=15,height = 15,units = "cm",dpi=300)
 topic_scores_corr %>% corrr::correlate() %>% corrr::network_plot()
 rm(lqs, topic_scores_corr)
-
-
-
-<!-- ### Buscar variaciones en metadatos () -->
-
-fecha: hay hechos relevantes?
-
-distribución por source
-
-
-```{r}
-noticias_tm_gamma %>%
-  mutate(id=as.integer(document)) %>%
-  left_join(noticias %>% select(id,fuente)) %>%
-  ggplot(aes(x=fuente,y=gamma)) +
-    geom_boxplot() +
-    facet_grid(~topic) + 
-    coord_flip()
 ```
 
+<!-- 2do: MISMO USANDO LEXICONES? -->
 
-
-<!-- ### Buscar variaciones en contenidos (lexicones) -->
-
-
-<!-- # % articulos que dicen "big data" en los primeros 200 x topico -->
-
+```{r eval=FALSE, include=FALSE}
+# % articulos que dicen "big data" en los primeros 200 x topico
 str(topicos_documentos_graficos)
 topicos_documentos_graficos %>% # proporcion de articulos que dicen big data en titulo
   filter(! topic_id %in% topicos_desechados ) %>%
@@ -502,8 +404,7 @@ topicos_documentos_graficos %>% # proporcion de articulos que dicen big data en 
         axis.title.y=element_blank()) 
 ggsave(filename = "graficos/bg_en_titulo.jpg",width=6,height = 7,units = "cm",dpi=300)
 
-<!-- # q articulos que dicen las 3 v -->
-
+# q articulos que dicen las 3 v
 x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
   filter(! topic_id %in% topicos_desechados ) %>%
   group_by(topic) %>%
@@ -527,136 +428,80 @@ x %>% group_by( topic_name ) %>% summarise(n=sum(vvv)) %>%
         axis.title.y=element_blank()) 
 ggsave(filename = "graficos/3v.jpg",width=6,height = 7,units = "cm",dpi=300)
 rm(x)
+```
 
-<!-- # q articulos que dicen *byte -->
+<!-- 2do: distinguir teóricamente interpretability (human!) de validalez -->
 
-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
-  filter(! topic_id %in% topicos_desechados ) %>%
+Por su parte, la validación estadística busca medir cuán confiable es el modelo, aunque **solamente** en términos de cuán consistentes son sus resultados. 
+
+<!-- It measures the effectiveness of a given set of parameters (calculated using the training set data) on a set of unknown data (Croft et al., 2010; Jurafsky & Martin, 2009).  -->
+<!-- Statistically, perplexity is “equivalent to the inverse of the geometric mean per-word likelihood” (Blei et al., 2003, p. 1008).  -->
+<!-- By convention, language modeling uses perplexity as the preferred measure for model evaluation (Blei et al., 2003; Wallach, Murray, Salakhutdinov, & Mimno, 2009).  -->
+
+*Perplexity* es la medida más usada en este tipo de pruebas. Esta es una métrica que resulta de una prueba tipo *held-out likelihood* en los que, una vez entrenado el modelo *con ciertos parámetros*, se utiliza para predecir los tópicos de documentos "nuevos" para el modelo, es decir, documentos que no eran parte del corpus con el que se entrenó. Volveremos sobre este diseño en el próximo capítulo con más detalle. 
+
+Por ahora, nos interesa observar que este tipo de pruebas es mayormente útil para estimar distintos modelos con diferentes parámetros. En este tutorial hemos utilizado sólo 2 inputs: el número de tópicos (K) y nuestro corpus. 
+En lo que sigue vamos a separar algunos documentos de nuestro corpus para tener documentos "nuevos" (subseteamos los primeros 10); luego, vamos a vamos a entrenar varios TM con distintos valores de K; y finalmente vamos a graficar los resultados de las pruebas de perplexity.
+
+```{r, eval=FALSE, echo=T}
+# atención: aquí vamos a entrenar 5 veces el modelo LDA. 
+# este código puede ser computacionalmente pesado y lento.
+posibles_k <- c(5, 10, 20, 50, 100)
+comparar_posibles_k <- posibles_k %>%
+  map(LDA, 
+      x = noticias_dtm[-c(1:10),], # subseteamos todos los documentos menos los primeros 10
+      method = "Gibbs",
+      control = list(seed = 1:5, nstart=5, verbose=1000))
+```
+
+```{r eval=TRUE, echo=FALSE}
+# comparar_posibles_k %>% saveRDS(file = "data_ignore/comparar_posibles_k.rds")
+posibles_k <- c(5, 10, 20, 50, 100)
+comparar_posibles_k <- readRDS(file = "data_ignore/comparar_posibles_k.rds")
+```
+
+```{r}
+tibble(k = posibles_k,
+           perplex = map_dbl(comparar_posibles_k, perplexity, 
+                             newdata=noticias_dtm[c(1:10),], 
+                             estimate_theta=FALSE)) %>%
+  ggplot(aes(k, perplex)) +
+  geom_point() +
+  geom_line()
+```
+
+Dado que perplexity es una medida de inconsistencia, conviene un valor más bajo. Generalmente estos valores se consiguen a un K mayor. En este ejemplo vemos un caso extremo e improbable, en el que suponemos más tópicos (K=100) que documentos en el corpus de entrenamiento (90). Veamos cómo se ven algunos tópicos de este último modelo, en términos de distribuciones probables de palabras (beta):
+
+```{r}
+comparar_posibles_k[[4]]
+tidy(comparar_posibles_k[[4]], matrix = "beta") %>%
+  filter(topic %in% c(1:15)) %>%
   group_by(topic) %>%
-  top_n(200,wt = score) %>%
-  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
-  mutate( 
-    byte = if_else( grepl("byte", text, ignore.case = TRUE) ,  1 , 0)) %>% 
-  group_by( topic_name ) %>% summarise(n=sum(byte)) %>%
-  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
-  geom_col() +
-  theme_minimal() + 
-  coord_flip() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank() ) + 
-  theme(legend.position="none") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank()) 
-ggsave(filename = "graficos/byte.jpg",width=6,height = 7,units = "cm",dpi=300)
-
-<!-- # TOPICO 16, 1 Y 17: BIG DATA -->
-
-<!-- # q articulos que dicen platform -->
-
-x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
-  filter(! topic_id %in% topicos_desechados ) %>%
+  top_n(10) %>%
   group_by(topic) %>%
-  top_n(200,wt = score) %>%
-  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
-  mutate( 
-    plataforma = if_else( grepl("plataforma", text, ignore.case = TRUE) ,  1 , 0),
-    algoritmo = if_else( grepl("algoritmo", text, ignore.case = TRUE), 1 , 0),
-    colec = if_else( grepl("colec", text, ignore.case = TRUE), 1 , 0) ) 
-x %>% group_by( topic_name ) %>% 
-  #summarise(n=sum(plataforma)) %>%
-  summarise(n=sum(algoritmo)) %>%
-  #summarise(n=sum(colec)) %>%
-  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
-  geom_col() +
-  theme_minimal() + 
-  coord_flip() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank() ) + 
-  theme(legend.position="none") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank()) 
-ggsave(filename = "graficos/plataforma.jpg",width=6,height = 7,units = "cm",dpi=300)
-ggsave(filename = "graficos/algoritmo.jpg",width=6,height = 7,units = "cm",dpi=300)
-rm(x)
-
-<!-- # TOPICO 10 y 15 : BIG DATA EN ELECCIONES -->
-
-x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
-  filter(! topic_id %in% topicos_desechados ) %>%
+  summarize(terminos = paste(term, collapse = " , ") %>% stringr::str_sub(string = ., start = 1, end = 80))
+comparar_posibles_k[[5]]
+tidy(comparar_posibles_k[[5]], matrix = "beta") %>%
+  filter(topic %in% c(1:15)) %>%
   group_by(topic) %>%
-  top_n(200,wt = score)
-x<-x %>% left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
-  mutate( 
-    Macri = if_else( grepl("macri", text, ignore.case = TRUE) ,  1 , 0),
-    Kirchner = if_else( grepl("kirchner", text, ignore.case = TRUE), 1 , 0),
-    Trump = if_else( grepl("trump", text, ignore.case = TRUE), 1 , 0),
-    Clinton = if_else( grepl("clinton", text, ignore.case = TRUE), 1 , 0),
-    Nix = if_else( grepl("nix", text, ignore.case = TRUE), 1 , 0),
-    Zuckerberg = if_else( grepl("zuckerberg", text, ignore.case = TRUE), 1 , 0)
-  )
-x <- x %>% group_by( topic_name ) %>% select(-(1:6)) %>% summarise_all(funs(sum)) %>% gather(key="actor",value="n",-topic_name)
-x
-x %>% ggplot(aes(x=reorder(topic_name,n),y=n,fill=actor)) + 
-  geom_col()+
-  theme_minimal() + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank() ) + 
-  theme(legend.title = element_blank())+
-  coord_flip()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank()) 
-ggsave(filename = "graficos/politicos.jpg",width=12,height = 8,units = "cm",dpi=300)
-x %>% ggplot(aes(x=reorder(topic_name,n),y=n,fill=actor)) + 
-  geom_bar(position="fill", stat="identity")+
-  theme_minimal() + 
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank() ) + 
-  theme(legend.title = element_blank())+
-  coord_flip()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank()) 
-ggsave(filename = "graficos/politicos2.jpg",width=12,height = 8,units = "cm",dpi=300)
-
-<!-- # MECKOCHART DE PERSONALIDADES -->
-
-x2<-x%>%inner_join(x %>% group_by(doc_id,topic_name) %>% select(-(1:6)) %>% summarize(Actores=sum(Macri,Kirchner,Trump,Clinton,Nix,Zuckerberg)))
-x2
-x2 <- x %>% inner_join(menciones)
-x2
-menciones<-x %>% group_by(topic_name)%>%summarize(Menciones=sum(Actores))
-menciones$xmax<-cumsum(menciones$Menciones)
-menciones$xmin<-menciones$xmax - menciones$Menciones
-menciones
-rm(x2)
-rm(menciones)
-rm(x)
-
-<!-- # TOPICO 18, 20, 22, 23 : BIG DATA EN BIZ -->
-
-x<-topicos_documentos_graficos %>% # proporcion de articulos que dicen las 3 v
-  filter(! topic_id %in% topicos_desechados ) %>%
+  top_n(10) %>%
   group_by(topic) %>%
-  top_n(200,wt = score) %>%
-  left_join( noticias_para_anotar %>% select( doc_id, text ) ) %>%
-  mutate( 
-    revolucion = if_else( grepl("revolucion", text, ignore.case = TRUE) ,  1 , 0),
-    cuarto = if_else( grepl("cuarto", text, ignore.case = TRUE), 1 , 0),
-    digital = if_else( grepl("digital", text, ignore.case = TRUE), 1 , 0) ) 
+  summarize(terminos = paste(term, collapse = " , ") %>% stringr::str_sub(string = ., start = 1, end = 80)) 
+```
 
-x %>% group_by( topic_name ) %>% summarise(n=sum(revolucion)) %>%
-  ggplot(aes(x=reorder(topic_name,n),y=n)) + 
-  geom_col() +
-  theme_minimal() + 
-  coord_flip() +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank() ) + 
-  theme(legend.position="none") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  theme(axis.title.x=element_blank(),
-        axis.title.y=element_blank()) 
-ggsave(filename = "graficos/revolucion.jpg",width=6,height = 7,units = "cm",dpi=300)
-rm(x)
+¿Te resultan tópicos más claros? Diferentes estudios (@Hagen2018, @Maier2018, @Boyd-Graber2014, @Chang2009) muestran que números elevandos de K, si bien son más útiles para una clasificación efectiva de documentos nuevos, no suelen dar tópicos más *interpretables*, es decir, más claros en términos de distinguir los sentidos que se incluyen. De hecho, parece más bien haber una correlación negativa entre la interpretabilidad de los tópicos y medidas predictivas como perplexity! Incluso, algunos de estos estudios afirman que un K > 50 no es humanamente interpretable, dada la dificultad de leer los resultados sin confundir u olvidar los tópicos posibles.
+
+¿Entonces, cómo determinar K, y con ello la validez de nuestro modelo? Bueno, por el momento parece haber sólo algunos lineamientos generales:
+
+* se procede por prueba y error, buscando agregar y desagregar tópicos, maximizando el número de tópicos coherentes; 
+* asumiendo que K debe ser lo suficiente pequeño como para que sean recordados e interpretables;
+* y lo suficiente grande como para evitarnos asignar documentos muy dispares al mismo grupo;
+* usar pruebas estadísticas entre K de ordenes muy distintos, para tener una idea de los límites del *overfitting*;
+
+Finalmente, el criterio no parece ser muy distinto que el que podemos aplicar en investigación cualitativa: realizar muestreos teóricos a conciencia, transparentar nuestros criterios a la hora de inferir y tomar decisiones, explicitar el marco de sentido de nuestras interpretaciones (nuestro marco teórico y epistemológico), discutir nuestras conclusiones y buscar acuerdos, sabiendo que el sentido del análisis no es tener la última palabra sino ofrecer una interpretación razonable empíricamente fundada.
+
+<!-- Esto no es una limitación del modelo: ninguna medida estadística puede evaluar nuestras interpretaciones sobre el contenido semántico, es decir, las ideas y los sentidos, de los documentos.  -->
+
+¿Es esta *dependencia* en el análisis cualitativo algo negativo? Sólo si nuestro objetivo es automatizar un análisis fiable sin intervención (y costos) del trabajo humano... pero esto también es una limitación en los objetivos del análisis, no pudiendo avanzar sobre un ejercicio clasificatorio. Más promisorio es tomar al modelado de tópicos como un primer paso, una herramienta heurística, en nuestra exploración de los datos. 
+
+> *Topic models must find what we know is there.* Ultimately, a topic model’s trustworthiness must be determined by informed human judgments. In particular, the model must find the broad trends and facts known to be true by the practitioner of the domain. Without such support in finding the known, topic models have limited value in discovering the unknown — i.e. quantifying known trends or discovering unexpected ones. [@Ramage2009]

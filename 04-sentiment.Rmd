@@ -148,7 +148,7 @@ En cuyo caso, vamos a anotar la media de las valoraciones de estos lexicones, ju
 
 Para cruzar tablas usaremos los verbos `_join`, o más específicamente, `left_join` que mantiene todas las filas de nuestra tabla, agregandole las columnas con los valores de otra. Para hacer el cruce de tablas, `_join` utiliza las columnas de nombre coincidente (aunque podés especificar los pares con `by = c("x"="y")`). Esta es una opción de unión entre otras: `left_join`, `inner_join`, `anti_join`.
 
-[Tomado de https://es.r4ds.hadley.nz/datos-relacionales.html](images/join-venn.svg)
+![Tomado de https://es.r4ds.hadley.nz/datos-relacionales.html](images/join-venn.jpg)
 
 ```{r}
 oraciones_lexicones <- oraciones_anotadas2 %>% 
