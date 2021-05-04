@@ -31,11 +31,11 @@ Para ello empecemos por cargar los datos
 <!-- 2do: definir fuente de datos -->
 <!-- 2do: https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_bd.csv -->
 
-```{r echo=TRUE, message=TRUE, warning=FALSE}
+```{r import_sentiment, echo=TRUE, message=TRUE, warning=FALSE}
 library(readr) # para leer csv
 library(tidyverse) # para manipular tablas
 
-oraciones <- readr::read_csv(file = "data/oraciones_bd3.csv") # importamos datos
+oraciones <- readr::read_csv(file = "data/oraciones_entrenamiento.csv") # importamos datos
 glimpse(oraciones) # miramos la estructura de la base
 ```
 
@@ -62,8 +62,8 @@ Con el modelo ya estamos en condiciones de empezar a *parsear* nuestro corpus de
 oraciones_anotadas <- udpipe_annotate( 
   object = modelo_sp, # el modelo de idioma
   x = oraciones$oracion, # el texto a anotar, 
-  doc_id = oraciones$id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
-  trace = 250
+  doc_id = oraciones$doc_id, # el id de cada oracion (el resultado tendrá 1 palabra x fila)
+  trace = 100
   ) %>% as.data.frame(.) # convertimos el resultado en data frame
 ```
 
@@ -253,7 +253,7 @@ Recordemos que tenemos las oraciones ya preprocesadas con `udpipe` en `oraciones
 
 Todo listo! Corremos la función y vemos el objeto resultante.
 
-```{r}
+```{r sentiment_analysis}
 oraciones_txt_sentiment <- txt_sentiment(
   x = oraciones_anotadas2,
   term = "lemma",
@@ -284,54 +284,16 @@ oraciones_txt_sentiment$overall %>%
   left_join(oraciones, by=c("doc_id"="id"))
 ```
 
-`txt_sentiment` suma los scores de las palabras por oración, lo que hace esperable que las oraciones más largas muestren una polaridad más extrema. 
+`txt_sentiment` suma los scores de las palabras por oración, lo que hace esperable que las oraciones más largas muestren una polaridad más extrema. Por ello tal vez convenga normalizar este score por la cantidad de palabras en cada oración:
 
-<!-- 2do: esto se puede corregir? hay una opcion de restrain en algun lado -->
+```{r}
+oraciones_txt_sentiment$overall %>% 
+  mutate(sentiment_polarity2=sentiment_polarity/terms) %>%
+  slice_max(order_by = sentiment_polarity2, n=10) %>%
+  left_join(oraciones, by=c("doc_id"="id"))
 
-<!-- ### sentimentR de sentimentr -->
-
-<!-- Finalmente, probemos `sentimentr`. -->
-
-<!-- ```{r} -->
-<!-- #install.packages("sentimentr") # instalamos si no lo tenemos -->
-<!-- library("sentimentr") -->
-<!-- ``` -->
-
-
-<!-- De vuelta, vamos a consultar la documentación del package para conocer qué funciones podemos ejecturar.  -->
-<!-- Dado que no hay vignette y que sabemos que la función que nos importa es `sentiment`, podemos ir directo a la referencia.  -->
-
-<!-- ```{r eval=FALSE} -->
-<!-- ?sentimentr::sentiment -->
-<!-- ``` -->
-
-<!-- Veamos qué debemos especificar en esta función: -->
-
-<!-- * `text.var` es el vector de oraciones a clasificar, procesado con `get_sentences()`; -->
-<!-- * `polarity_dt` es un data.table que contiene 2 columnas: términos y polaridad, que debe ser procesado con `as_key()`; -->
-<!-- * `valence_shifters_dt` un data.table con 2 columnas: `x` con el término , `y` con el tipo de modificador: 1 = negadores, 2 = amplificador, 3 = amplificadores, y 4 = conjunciones adversativas. -->
-
-<!-- Vamos a preparar los datos para cumplir estos parámetros: -->
-
-<!-- ```{r echo=TRUE} -->
-<!-- sentr_oraciones <- get_sentences(oraciones$oracion) -->
-<!-- sentr_key <- lexicones %>% select(words=lemma , polarity=v)  %>% as_key() -->
-<!-- sentr_valence <- data.frame( -->
-<!--   rbind( -->
-<!--     cbind(c("no","nunca","nadie"),1), -->
-<!--     cbind(c("muy","mas"),2), -->
-<!--     cbind(c("casi","alguno","menos"),3) -->
-<!--     ) -->
-<!-- ) %>% select(x=1,y=2) -->
-<!-- ``` -->
-
-<!-- Veamos resultados: -->
-
-<!-- ```{r eval=FALSE, include=FALSE} -->
-
-<!-- sentr_result <- sentiment( -->
-<!--   text.var = sentr_oraciones,  -->
-<!--   polarity_dt = sentr_key -->
-<!--   ) -->
-<!-- glimpse(sentr_result) -->
-<!-- ``` -->
+oraciones_txt_sentiment$overall %>% 
+  mutate(sentiment_polarity2=sentiment_polarity/terms) %>%
+  slice_min(order_by = sentiment_polarity2, n=10) %>%
+  left_join(oraciones, by=c("doc_id"="id"))
+```

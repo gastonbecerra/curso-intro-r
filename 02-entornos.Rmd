@@ -7,10 +7,9 @@ R es un lenguaje de programación pensado para computación estadística, que se
 Para correr R es necesario instalar el **entorno que ejecuta el lenguaje**. 
 Para ello tenés que descargar la última versión desde alguna copia regional (o *mirror*) del [CRAN: El archivo oficial de R](https://cran.r-project.org/mirrors.html) como, por ejemplo, la que aloja la [Universidad Nacional de La Plata](http://mirror.fcaglp.unlp.edu.ar/CRAN/), en Argentina.
 
-```{block, type='rmdcomment'}
-¿No estás acostumbrado a instalar programas y preferís ver el proceso antes de meter mano? [Video: Cómo Descargar e Instalar R y RStudio - 2020](https://www.youtube.com/watch?v=D9Bp11iZssc)
-```
 
+<!-- ```{block, type='rmdcomment'} -->
+> ¿No estás acostumbrado a instalar programas y preferís ver el proceso antes de meter mano? [Video: Cómo Descargar e Instalar R y RStudio - 2020](https://www.youtube.com/watch?v=D9Bp11iZssc)
 
 ### Instalación de Interface RStudio  {-}
 
