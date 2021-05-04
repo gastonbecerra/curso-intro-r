@@ -1,4 +1,4 @@
-# Modelado de tópicos
+# Modelado de topicos
 
 En este capítulo nos introduciremos a una técnica de aprendizaje no supervisado en el campo del procesamiento del lenguaje natural: el modelado de tópicos (*topic modeling*). Esta técnica busca construir tópicos o temas en base a las distribuciones de palabras en un conjunto de documentos.
 

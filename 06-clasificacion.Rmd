@@ -1,4 +1,4 @@
-# Clasificar automáticamente 
+# Clasificar automaticamente 
 
 En este capítulo nos introduciremos a una técnica de "aprendizaje supervisado". Nos referimos así a algoritmos que, a partir de datos que ya están clasificados o catalogados de antemano por medio de alguna variable (“datos etiquetados”), buscan inferir reglas para clasificar otros registros. 
 Lo interesante de este tipo tareas es que nosotros no estamos introduciendo *reglas explícitas* sino que nuestro modelo resultará de registrar patrones diferenciales para las clases de datos que servimos.
@@ -143,8 +143,6 @@ En lo que sigue vamos a generar distintos modelos de clasificación, utilizando 
 
 *Random forest* es uno de los métodos de entrenamiento de modelos más estandarizados y extendidos. Su nivel de eficacia suele ser tan bueno como su simpleza conceptual: se trata de un "bosque" poblado de "árboles de decisión" que hacen distintas preguntas a los datos, resultando en la asignación de una etiqueta. 
 
-![Árbol de decisión](https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Decision_Tree.jpg/220px-Decision_Tree.jpg)
-
 Como su nombre lo indica, un random forest se constituye a partir del "ensamble" de varios árboles (de decisión). Así, la clasificación resultante de una predicción de este tipo de modelos se basa en una suerte de "votación" donde cada uno de los árboles del bosque emite su voto (etiqueta predicha para cada muestra) resultando electa la que mayor score haya conseguido. Este tipo de modelos de “ensambla” se basan en el principio de conceder mayor probabilidad de acierto a una mayoría de voces, que a la de una sola. 
 
 Para generar el modelo utilizaremos el paquete `randomForest`, con la función homónima. Si bien hay muchos parámetros, aquí utilizaremos la función de la manera más simple: indicándo tan sólo cuáles son las variables a contemplar y la variable a predecir, y cuál es la tabla con la que debe trabajar (`data=or_train`). Para lo primero vamos a usar la notación de fórmula:  `clase_oracion ~ .`, donde indicamos que la variable de la izquierda (`clase_oracion`) depende (o es *función de*, `~`) las variables de la derecha, que en nuestro caso son todas las demás, de modo que las anotamos como `.`.
@@ -271,7 +269,7 @@ caret::confusionMatrix(or_test_over$clase_oracion, or_rf_predict_over)
 
 Estos resultados son mucho más promisorios... aunque esto nos enfrenta a un enorme riesgo: *overfitting*. Considerá que entrenamos al modelo con muestras sintéticas pero análogas a los pocos casos sub-representados. No hay palabras nuevas que denoten un sentido negativo. Así, nuestro modelo no se volvió más abierto y abstracto sino que probablemente este rendimiento esté limitado a los datos de entrenamiento. En otras palabras, corremos el riesgo de que lo hayamos vuelto experto en unos pocos casos y que sirva sólo a ellos.
 
-![Overfitting: descripción gráfica](images/over1.jpg)
+![Overfitting: descripción gráfica](images/over1.jpg){height=200px}
 
 Lamentablemente la solución es una generalmente costosa y que no siempre tenemos a mano: incluir más casos etiquetados, con más variedad y vocabulario, y mejorar procesamientos e hiperparámetros.
 

@@ -1,4 +1,4 @@
-# Análisis de datos con R
+# Analisis de datos con R
 
 En este capítulos nos introduciremos al ciclo de trabajo del análisis de datos, así como al lenguaje R. Particularmente, vamos a aprender a:
 

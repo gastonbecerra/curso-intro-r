@@ -1,4 +1,4 @@
-# Procesamiento del lenguaje natural y Análisis de sentimiento
+# Procesamiento del lenguaje natural y Analisis de sentimiento
 
 En este capítulo nos introduciremos al procesamiento del lenguaje natural, y a una tarea particular de dicho campo: el análisis de sentimiento o polaridad.
 
