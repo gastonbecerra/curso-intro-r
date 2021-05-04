@@ -16,20 +16,24 @@ Con este dataset, y a través de las tareas señaladas, vamos a intentar respond
 
 Lo primero que haremos es cargar algunas librerias (`package`) que van a poner a nuestra disposición un conjunto de funciones que utilizaremos a lo largo de todo el ejercicio. Recordá que una función es una secuencia de comandos que se aplican a un objeto que se le pasa a la función, referenciándolo entre sus paréntesis. Por ejemplo, utilizaremos la función `library()` y el nombre de las librerías para habilitar las funciones de `readr` para importar datos, y el conjunto de librerías del `tidyverse` para manipular y visualizar. 
 
-Luego importaremos los datos con la función `read_csv()` de la librería `readr`. En RStudio podés listar a las funciones de un paquete si tipeas su nombre seguido de "::". Esta forma de vincular paquetes y funciones es recomendada, en tanto los nombres de las funciones pueden pisarse, dependiendo del orden en que cargamos los paquetes.
+```{r echo=TRUE, message=FALSE, warning=FALSE, eval=FALSE}
+# para cargar una libreria primero hay que instalarla:
+install.packages("readr") # la usamos para leer csv
+install.packages("tidyverse") # la usamos para manipular datos
+```
+
+```{r message=FALSE, warning=FALSE}
+# una vez instaladas hay que cargarlas en memoria
+library(readr) 
+library(tidyverse) 
+```
+
+
+Luego importaremos los datos con la función `read_csv()` de la librería `readr`. En RStudio podés listar a las funciones de un paquete si tipeas su nombre seguido de `::`. Esta forma de vincular paquetes y funciones es recomendada, en tanto los nombres de las funciones pueden pisarse, dependiendo del orden en que cargamos los paquetes.
 
 Nos interesa que esos datos importados se guarden como un objeto en memoria, ya que estaremos trabajando con ellos en lo que sigue. Para ello, utilizamos un operador de asignación ` <- `, precedido del nombre que le daremos al objeto (en nuestro caso `asociaciones`).
 
-<!-- 2do: definir fuente de datos -->
-
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
-# para cargar una libreria primero hay que instalarla:
-# install.packages("readr")
-# install.packages("tidyverse")
-
-library(readr) # vamos a cargar las librerias
-library(tidyverse) 
-
 asociaciones <- readr::read_csv(file = "https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/asociaciones.csv")
 ```
 
@@ -52,7 +56,7 @@ head(asociaciones, n = 10)
 
 Por lo que podemos ver, tenemos 4 columas: `id` y `palabra` son variables de texto (`<chr>`), mientras `orden` y `valoracion` son numéricas. Otro posible tipo de columna es el `factor` (`<fct>`) que sirve para registrar categorías, donde cada valor posible es un `level`.
 
-Podemos ver que el valor de `id` se repite entre filas, lo que nos da la pauta que varios registros corresponden naturalmente juntos. En este caso, se tratan de las distintas palabras mencionadas por un mismo participante frente a "big data". Este diseño de tabla donde hay `n registros x 1 participante`, a diferencia de tener sólo registro con muchas columnas tiene muchas ventajas. Por el momento señalemos sólo 1: todas nuestras palabras quedan en la misma columna, de modo que si queremos procesarlas será muy fácil referenciarlas. Cada palabra propuesta tiene, además, el orden de evocación (`orden`) y la valoración dada (`valoracion`).
+Podemos ver que el valor de `id` se repite entre filas, lo que nos da la pauta que varios registros corresponden naturalmente juntos. En este caso, se tratan de las distintas palabras mencionadas por un mismo participante frente a "big data". Este diseño de tabla donde hay *n registros x 1 participante*, a diferencia de tener sólo registro con muchas columnas tiene muchas ventajas. Por el momento señalemos sólo 1: todas nuestras palabras quedan en la misma columna, de modo que si queremos procesarlas será muy fácil referenciarlas. Cada palabra propuesta tiene, además, el orden de evocación (`orden`) y la valoración dada (`valoracion`).
 
 Luego, es útil tener una idea de los valores posibles de las distintas columnas o variables. `summary` nos devuelve un resumen de estadísticas descriptivas, que nos permite saber, por ejemplo, en qué rango se registran las valoraciones, o cómo se distribuyen los ordenes de evocación.
 
@@ -70,6 +74,7 @@ Otras tareas que nos pueden interesar en el análisis exploratorios son:
 Muchas de estas tareas se pueden hacer con [distintos packages](https://www.groundai.com/project/the-landscape-of-r-packages-for-automated-exploratory-data-analysis/1).
 
 Recordá que podes ver la tabla, como si estuvieras viendo una planilla, con `view(asociaciones)`.
+
 
 ## Transformar, visualizar y limpiar
 
@@ -174,28 +179,26 @@ glimpse(asoc_frecuentes)
 
 Con este nuevo dataset deberíamos repetir los análisis anteriores sobre las palabras mas/menos valoradas. Este es un escenario al que deberemos acostrumbrarnos: **el proceso de transformación-visualización-limpieza es iterativo**. En la medida en que nos familiaricemos más con nuestros datos, que aclaremos nuestras preguntas, y que decidamos y programemos los análisis, deberemos repetirnos varias veces. 
 
-Por últimos, nos queda indagar cuáles son las palabras que más rápidamente fueron evocadas en la encuesta, es decir, las que tiene un orden de evocación más cercano a 1. Estas son las ideas que probablemente sean las más accesibles y memorables. Pero ahora en lugar de una lista, veamos un gráfico en el que podamos incluir otra información: la valoración media de la palabra.
-
-<!-- 2do: dar vuelta este analisis: el grafico para valoraciones, y la tabla boluda para orden -->
+Por último, nos queda indagar cuáles son las palabras que más rápidamente fueron evocadas en la encuesta, es decir, las que tiene un orden de evocación más cercano a 1. Estas son las ideas que probablemente sean las más accesibles y memorables. Pero ahora en lugar de una lista, veamos un gráfico en el que podamos incluir otra información: la valoración media de la palabra.
 
 ```{r message=TRUE, warning=FALSE}
 asoc_frecuentes %>% 
     slice_min(order_by = orden_media, n=10) %>% # las de valor mas bajo
   ggplot( # vamos a usar ggplot para graficar
     aes( # dentro de aes indicamos las variables a vincular con las partes del gráfico
-      y = palabra,
-      x = orden_media,
-      fill = valoracion_media
+      y = palabra, # en el eje y vamos a poner la palabra
+      x = orden_media, # en el eje x el orden de evocación
+      fill = valoracion_media # en el color vamos a poner la valoración (-5 y 5)
     )
   ) + 
   geom_col()
 ```
 
-Estos primeros análisis ya nos dan una idea de la estructura de los datos, y algunas pistas sobre las respuestas. En lo que sigue vamos a poner todas estas operaciones juntas, con algunos pasitos extras, para poder hacer un *análiasis prototípico* según la *teoría de la representación social*.
+Estos primeros análisis ya nos dan una idea de la estructura de los datos, y algunas pistas sobre las respuestas...
 
 ## Funciones
 
-En este apartado vamos a juntar estas operaciones de modo tal que nos permita realizar un *análiasis prototípico*, siguiendo el modelo estructural de @Abric2001 para la *teoría de la representación social*. Esta teoría supone que las representaciones se compone, por un lado, de un núcleo central que aúna los sentidos más comunes y estables de la representación, y por el otro, de elementos periféricos que concretizan la representación y la vinculan a los distintos contextos específicos de su uso. 
+En este apartado vamos a juntar estas operaciones de modo tal que nos permita realizar un *análisis prototípico*, siguiendo el modelo estructural de @Abric2001 para la *teoría de la representación social*. Esta teoría supone que las representaciones se compone, por un lado, de un núcleo central que aúna los sentidos más comunes y estables de la representación, y por el otro, de elementos periféricos que concretizan la representación y la vinculan a los distintos contextos específicos de su uso. 
 
 **¿Cómo se calcula?** Este análisis consiste en dividir las palabras evocadas en 4 -o más- segmentos, según su frecuencia y rango de evocación, y utilizando alguna medida estadística de estos valores como criterio de corte. Esto nos dejará un cuadro que cruza las palabras mas y menos frecuentes, y las evocadas más y menos rápidamente. Estos 4 segmentos suelen ser interpretados como el núcleo de la representación, sus elementos periféricos y dinámicos, y sus manifestaciones singulares e idiosincráticas. Sin embargo, vale la aclaración de @Wachelke2011: 
 
@@ -205,7 +208,7 @@ Una decisión importante para este análisis es el criterio para establecer los 
 
 Aquí vamos a "empaquetar" las operaciones necesarias para el análisis en una función, con una serie de parámetros (inputs) y un valor de salida (output). Esto nos va a permitir fácilmente probar distintos parametros para las decisiones que debemos tomar, sin tener que volver a escribir el código de las operaciones. 
 
-Para crear una funcion vamos a utilizar `function()` incluyendo los parametros que esperamos entre los paréntesis. Vamos a guardar la función en un objeto (y así le vamos a dar un nombre que podamos invocar después) con `<-`.
+Para crear una funcion vamos a utilizar `function()` incluyendo los parametros que esperamos entre los paréntesis. Vamos a guardar la función en un objeto (y así le vamos a dar un nombre que podamos invocar después) con ` <- `.
 
 ```{r}
 analisis_proto <- function (tabla_evocaciones) {
@@ -346,7 +349,7 @@ prototipico %>%
   scale_colour_gradient(low = "red", high = "green", na.value = NA) + # gama de colores para valores continuos
   geom_text( aes(size=20, colour=valoracion_media), fontface = "bold",
              show.legend = FALSE, nudge_y = -.1, check_overlap = TRUE) + # agregamos las palabras
-  labs(y="Orden de evocación", x = "Frecuencia (log)") +
-  theme_minimal()
+  labs(y="Orden de evocación", x = "Frecuencia (log)") + # ponemos labels en los ejes
+  theme_minimal() # borremos estilos innecesarios
 
 ```

@@ -101,7 +101,7 @@ glimpse(oraciones_anotadas2)
 ```
 Es interesante señalar que pasamos de `r nrow(oraciones_anotadas)` palabras parseadas y anotadas, a solo `r nrow(oraciones_anotadas2)`, que son con las que trabajaremos.
 
-## Análisis de sentimiento
+## Análisis de sentimiento 
 
 Generalmente se acepta que hay 2 métodos para este tipo de análisis: 
 

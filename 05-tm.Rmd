@@ -63,7 +63,7 @@ Para poder completar nuestros análisis primeros realizaremos varias tareas de p
 Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano, y que usamos en el capítulo anterior.
 
 ```{r, eval=F, echo=T}
-install.packages("udpipe") # instalamos la libreria
+#install.packages("udpipe") # instalamos la libreria
 library(udpipe) # la cargamos
 modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia  
 modelo_sp$file_model # refrencia al modelo descargado
@@ -74,7 +74,6 @@ modelo_sp <- udpipe_load_model(file = modelo_sp$file_model) # cargamos el modelo
 library(udpipe)
 modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
 ```
-
 
 ```{r eval=F, echo=T}
 noticias_anotadas <- udpipe_annotate( 

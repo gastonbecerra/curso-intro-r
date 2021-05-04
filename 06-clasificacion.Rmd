@@ -48,15 +48,27 @@ table(oraciones$clase_oracion) # vemos la distribución de las clasificaciones
 ```
 
 Como podemos observar, encontramos aquí un dataset "desbalanceado", en el que una cierta clase se encuentran sobre-representada en el total de la población. Particularmente: los primeros 300 registros son oraciones positivas, mientras que los últimos 100 son negativos.
-Esta proporción no debe sorprendernos si consideramos el origen del dataset: en las noticias abunda el discurso promocional del big data que lo presenta como una revolución del conocimiento con aplicaciones posibles en distintos campos de la industria y el comercio, o en el manejo de las cuestiones de gobierno [@Kitchin2014], sobre aquellas noticias que ponen el foco en sus riesgos.
+Esta proporción no debe sorprendernos si consideramos el origen del dataset: en las noticias abunda el discurso promocional del big data que lo presenta como una revolución del conocimiento con aplicaciones posibles en distintos campos de la industria y el comercio, o en el manejo de las cuestiones de gobierno, sobre aquellas noticias que ponen el foco en sus riesgos.
 
 Este desbalanceo es uno de los tantos problemas que pueden emerger en cualquier proyecto de ciencia de datos. En muchas situaciones, la cantidad y calidad de los mismos no dependen de la responsabilidad del investigador, quien deberá pensar en estrategias para hacer su corpus más "limpio". Ahondaremos en este problema más adelante.  
 
 Ahora vamos a comenzar a preprocesar los datos. En nuestro corpus, todos nuestros datos se encuentran contenidos en la variable `oracion`, que tiene expresiones del lenguaje natural. Para poder entrenar un modelo con ellas conviene empezar por reducir la complejidad de estas expresiones, por ejemplo, quedándonos con las palabras posiblemente más significativas. Aquí optamos por reconstruir las oraciones con los *lemmas* de sólo algunos tipos de palabras, anotando el texto con la librería `udpipe` que hemos usado en capítulos anteriores.
 
-```{r}
-library(udpipe) # para anotar texto
+
+```{r, eval=F, echo=T}
+#install.packages("udpipe") # instalamos la libreria
+library(udpipe) # la cargamos
+modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia  
+modelo_sp$file_model # refrencia al modelo descargado
+modelo_sp <- udpipe_load_model(file = modelo_sp$file_model) # cargamos el modelo en memoria
+```
+
+```{r, eval=T, echo=F}
+library(udpipe)
 modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+```
+
+```{r}
 oraciones_anotadas <- udpipe_annotate( 
   object = modelo_sp, # el modelo de idioma
   x = oraciones$oracion, # el texto a anotar, 
@@ -257,7 +269,11 @@ or_rf_predict_over = predict(or_rf_over, newdata=or_test_over)
 caret::confusionMatrix(or_test_over$clase_oracion, or_rf_predict_over)
 ```
 
-Estos resultados son mucho más promisorios... aunque esto nos enfrenta a un enorme riesgo: *overfitting*. Considerá que entrenamos al modelo con muestras sintéticas pero análogas a los pocos casos sub-representados. No hay palabras nuevas que denoten un sentido negativo. Así, nuestro modelo no se volvió más abierto y abstracto sino que probablemente este rendimiento esté limitado a los datos de entrenamiento. En otras palabras, corremos el riesgo de que lo hayamos vuelto experto en unos pocos casos. Lamentablemente la solución es una generalmente costosa: más casos etiquetados, con más variedad y vocabulario.
+Estos resultados son mucho más promisorios... aunque esto nos enfrenta a un enorme riesgo: *overfitting*. Considerá que entrenamos al modelo con muestras sintéticas pero análogas a los pocos casos sub-representados. No hay palabras nuevas que denoten un sentido negativo. Así, nuestro modelo no se volvió más abierto y abstracto sino que probablemente este rendimiento esté limitado a los datos de entrenamiento. En otras palabras, corremos el riesgo de que lo hayamos vuelto experto en unos pocos casos y que sirva sólo a ellos.
+
+![Overfitting: descripción gráfica](images/over1.jpg)
+
+Lamentablemente la solución es una generalmente costosa y que no siempre tenemos a mano: incluir más casos etiquetados, con más variedad y vocabulario, y mejorar procesamientos e hiperparámetros.
 
 
 ### Feature engineering (modificar datos)
@@ -379,7 +395,6 @@ colnames(or_nuevas_dtm2) = make.names(colnames(or_nuevas_dtm2))
 predict(or_rf_over, newdata=or_nuevas_dtm2)
 
 sort(names(or_nuevas_dtm2))
-
 
 # agrandar nuestro vocabulario incluyendo palabras con 0 que estaban en el modelo viejo
 # el vocabulario nuevo no es considerado
