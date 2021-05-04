@@ -22,7 +22,7 @@ Nos interesa que esos datos importados se guarden como un objeto en memoria, ya 
 
 <!-- 2do: definir fuente de datos -->
 
-```{r echo=TRUE, message=TRUE, warning=FALSE}
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 # para cargar una libreria primero hay que instalarla:
 # install.packages("readr")
 # install.packages("tidyverse")
@@ -30,7 +30,7 @@ Nos interesa que esos datos importados se guarden como un objeto en memoria, ya 
 library(readr) # vamos a cargar las librerias
 library(tidyverse) 
 
-asociaciones <- readr::read_csv(file = "data/asociaciones.csv")
+asociaciones <- readr::read_csv(file = "https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/asociaciones.csv")
 ```
 
 ## Explorar los datos

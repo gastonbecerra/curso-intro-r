@@ -24,8 +24,9 @@ Escenarios sociales y técnicos como el big data, así como los avances en intel
 
 ## Contenidos {-}
 
-El libro consta (por ahora) de 4 tutoriales. Los primeros 2 introducen a la programacion con R desde cero, y a lo básico del procesamiento del lenguaje natural; los últimos 2 introducen a 2 métodos de aprendizaje automático. 
-Los materiales y casos prácticos se basan en fragmentos de nuestras propias investigaciones acerca del sentido social del big data [@Becerra2018, @Becerra2018a]. Hemos optado por esta referencia a nuestros propios trabajos, esperando *abrir la cocina de la investigación* y tener la chance de discutir cómo las técnicas y los análisis que aquí presentamos pueden ser integrados en una investigación social.
+El libro consta (por ahora) de 4 tutoriales. Los primeros 2 introducen a la programacion con R desde cero, y a lo básico del procesamiento del lenguaje natural; los últimos 2 introducen a 2 métodos de aprendizaje automático (*machine learning*), que nos permitirán ver *en chiquitito* implementaciones de los problemas que discutiremos teóricamente.
+
+Los materiales y casos prácticos se basan en fragmentos de nuestras propias investigaciones acerca del sentido social del big data [@Becerra2018]. Hemos optado por esta referencia a nuestros propios trabajos por dos razones: primero, porque nos va a permitir seguir en tema discutiendo acerca del big data; segundo, porque buscamos *abrir la cocina de la investigación* y tener la chance de discutir cómo las técnicas y los análisis que aquí presentamos pueden ser integrados en una investigación social.
 
 ### Tutorial #1. Explorar, manipular y visualizar datos {-}
 

@@ -11,6 +11,14 @@ A lo largo de este ejercicio veremos:
 
 Vamos a utilizar esta técnica para intentar explorar **¿Cuál es la tematización del big data en la prensa?**, utilizando un corpus de noticias que incluyen la palabra "big data", tomadas de periódicos digitales argentinos. Nos interesa particularmente indagar de qué manera el big data es contextualizado, de modo tal que el modelado de tópicos pueden asistir al análisis de "frames" discursivos. Este tipo de análisis son útiles para investigar acerca de la construcción social de un fenómeno por parte de un sistema de comunicación, como es la prensa [@Jacobi2016].
 
+A lo largo de este tutorial trabajaremos con varias librerías, que podemos instalar con el siguiente código:
+
+```{r eval=FALSE}
+install.packages(c("readr", "tidyverse", "tidytext", "udpipe")) # las hemos instalado en capítulos anteriores
+install.packages(c("topicmodels", "stopwords", )) # las usaremos por primera vez
+```
+
+
 ## Pre-procesamiento de texto
 
 Como en toda tarea de procesamiento del lenguaje natural, comenzaremos por cargar el corpus y preprocesar el texto.
@@ -41,7 +49,8 @@ noticias_para_anotar %>% saveRDS(file = "data/noticias_curso.rds")
 library(tidyverse) # para manipular en general
 library(tidytext) # para convertir los objetos a formatos requeridos / devueltos por LDA
 
-noticias <- readRDS(file = "data/noticias_curso.rds") %>% mutate(id=1:n())
+noticias <- readr::read_csv("https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/noticias_tm.csv") %>%
+  mutate(id=1:n())
 glimpse(noticias) # miramos la estructura de la base
 ```
 
@@ -51,12 +60,21 @@ Para poder completar nuestros análisis primeros realizaremos varias tareas de p
 2. Reduciremos las palabras a sus *lemmas*, formas básicas de las palabras, sin género ni conjugación;
 3. Descartaremos algunas palabras comunes, quedándonos sólo con las más significativas.
 
-Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano. En el capítulo anterior hemos instalado esta librería y descargado el modelo del idioma.
+Para estas tareas trabajaremos con la librería UdPipe, desarrollada por el [Instituto de linguistica formal y aplicada de la Universidad de la República Checa](https://ufal.mff.cuni.cz/udpipe), que tiene un modelo para procesar texto en castellano, y que usamos en el capítulo anterior.
 
-```{r, eval=T, echo=T}
-library(udpipe)
-modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe") # ruta al modelo
+```{r, eval=F, echo=T}
+install.packages("udpipe") # instalamos la libreria
+library(udpipe) # la cargamos
+modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia  
+modelo_sp$file_model # refrencia al modelo descargado
+modelo_sp <- udpipe_load_model(file = modelo_sp$file_model) # cargamos el modelo en memoria
 ```
+
+```{r, eval=T, echo=F}
+library(udpipe)
+modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
+```
+
 
 ```{r eval=F, echo=T}
 noticias_anotadas <- udpipe_annotate( 

@@ -36,7 +36,8 @@ Empecemos por importar y observar nuestra base de datos.
 
 ```{r classif_import, message=FALSE, warning=FALSE}
 library(tidyverse) # para manipular tablas
-oraciones <- readr::read_csv("./data/oraciones_entrenamiento.csv") %>% rename(clase_oracion=estado, id=doc_id)# importamos los datos
+oraciones <- readr::read_csv("https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_entrenamiento.csv") %>% # importamos los datos
+  rename(clase_oracion=estado, id=doc_id) 
 glimpse(oraciones) # exploramos la estructura de los datos
 ```
 
@@ -47,7 +48,7 @@ table(oraciones$clase_oracion) # vemos la distribución de las clasificaciones
 ```
 
 Como podemos observar, encontramos aquí un dataset "desbalanceado", en el que una cierta clase se encuentran sobre-representada en el total de la población. Particularmente: los primeros 300 registros son oraciones positivas, mientras que los últimos 100 son negativos.
-Esta proporción no debe sorprendernos si consideramos el origen del dataset: en las noticias abunda el discurso promocional del big data que lo presenta como una revolución del conocimiento con aplicaciones posibles en distintos campos de la industria y el comercio, o en el manejo de las cuestiones de gobierno [@Kitchin2014b], sobre aquellas noticias que ponen el foco en sus riesgos.
+Esta proporción no debe sorprendernos si consideramos el origen del dataset: en las noticias abunda el discurso promocional del big data que lo presenta como una revolución del conocimiento con aplicaciones posibles en distintos campos de la industria y el comercio, o en el manejo de las cuestiones de gobierno [@Kitchin2014], sobre aquellas noticias que ponen el foco en sus riesgos.
 
 Este desbalanceo es uno de los tantos problemas que pueden emerger en cualquier proyecto de ciencia de datos. En muchas situaciones, la cantidad y calidad de los mismos no dependen de la responsabilidad del investigador, quien deberá pensar en estrategias para hacer su corpus más "limpio". Ahondaremos en este problema más adelante.  
 
@@ -273,7 +274,7 @@ Vamos a probar esto último. Por simpleza, vamos a calcular un *score* de sentim
 Para poder considerar este valor lo vamos a agregar a nuestro objeto `or_dtm2` (la matrix de términos por documentos) sobre la que estabamos trabajando.
 
 ```{r feature_engi}
-lexicones <- readr::read_csv('data/lexicones.csv')
+lexicones <- readr::read_csv('https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/lexicones.csv')
 
 # preparamos el lexicon para que los términos tengan 2 valores: 1 positivas y -1 negativas
 polarity_terms <- lexicones %>%

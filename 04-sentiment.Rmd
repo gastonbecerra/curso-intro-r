@@ -1,4 +1,4 @@
-# Procesamiento del lenguaje natural
+# Procesamiento del lenguaje natural y Análisis de sentimiento
 
 En este capítulo nos introduciremos al procesamiento del lenguaje natural, y a una tarea particular de dicho campo: el análisis de sentimiento o polaridad.
 
@@ -12,11 +12,16 @@ Trabajaremos con un corpus de oraciones, extraídas de noticias argentinas que i
 Esta tarea puede ser útil para comenzar a explorar el fenómeno de la polaridad del big data. Al respecto, luego de analizar noticias acerca de big data en diarios de Estados Unidos, Reino Unido y Australia, @Paganoni2019 sugiere: 
 
 > Big data appears to be framed between two poles—data and information as opposed to rights and privacy—whose gap has of late been emphasised by a number of data scandals affecting business, health and politics, and culminating in the major unforeseen event of Cambridge Analytica and Facebook.
+
+A lo largo de este tutorial trabajaremos con varias librerías, que podemos instalar con el siguiente código:
+
+```{r eval=FALSE}
+install.packages(c("readr", "tidyverse", "tidytext")) # las hemos instalado en capítulos anteriores
+install.packages(c("udpipe")) # las usaremos por primera vez
+```
+
     
 ## Pre-procesamiento de texto
-
-<!-- 2do: armar una base de 100 oraciones bien claras positivo/negativo -->
-<!-- 2do: con deps o upos se puede centrar en oraciones sobre big data? -->
 
 Naturalmente, antes de todo proyecto de análisis de datos, necesitamos datos. El dataset con el que trabajaremos en este capítulo fue construido a través de la técnica de *scrapping*, que consiste en capturar datos a partir de la exploración de los elementos y anotaciones HTML de sitios webs. Ahora bien, si quisiéramos inmediatamente "procesar" estos datos, nos encontraríamos con varios problemas. Para empezar, ¿Cómo podríamos hacer para que el montón de textos que tenemos sea interpretable por una máquina que no habla ni entiende nuestro idioma? 
 
@@ -28,14 +33,11 @@ Para llegar a esta instancia de “estructuración” del lenguaje natural, el p
 
 Para ello empecemos por cargar los datos
 
-<!-- 2do: definir fuente de datos -->
-<!-- 2do: https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_bd.csv -->
-
-```{r import_sentiment, echo=TRUE, message=TRUE, warning=FALSE}
+```{r import_sentiment, echo=TRUE, message=FALSE, warning=FALSE}
 library(readr) # para leer csv
 library(tidyverse) # para manipular tablas
 
-oraciones <- readr::read_csv(file = "data/oraciones_entrenamiento.csv") # importamos datos
+oraciones <- readr::read_csv(file = "https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/oraciones_entrenamiento.csv") # importamos datos
 glimpse(oraciones) # miramos la estructura de la base
 ```
 
@@ -44,14 +46,14 @@ Para el análisis morfosintáctico trabajaremos con la librería UdPipe, desarro
 Lo primero que debemos hacer es instalar la librería. Luego, deberemos descargar el modelo del idioma que nos interesa. 
 
 ```{r, eval=F, echo=T}
-install.packages("udpipe")
+install.packages("udpipe") # instalamos la libreria
+library(udpipe) # la cargamos
 modelo_sp <- udpipe::udpipe_download_model('spanish') # descarga el modelo y guarda la referencia  
 modelo_sp$file_model # refrencia al modelo descargado
+modelo_sp <- udpipe_load_model(file = modelo_sp$file_model) # cargamos el modelo en memoria
 ```
 
-O si ya lo tenemos descargado, es conveniente referenciarlo:
-
-```{r, eval=T, echo=T}
+```{r, eval=T, echo=F}
 library(udpipe)
 modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
 ```
@@ -107,7 +109,6 @@ Generalmente se acepta que hay 2 métodos para este tipo de análisis:
 2. un enfoque basado en clasificación / aprendizaje automático, que busca inferir reglas para establecer la polaridad de una oración a partir de estudiar un dataset de oraciones previamente clasificadas (por un humano). 
 
 En este capítulos nos centraremos en el primer enfoque (lexicones), dejando el aprendizaje para un capítulo posterior. 
-
 Buscaremos implementar esto de dos maneras: 
 
 1. en primer lugar, cruzando la tabla de oraciones con el lexicon, y haciendo nosotros alguna evaluación; 
@@ -140,7 +141,7 @@ readr::write_csv(lexicones, 'data/lexicones.csv')
 ```
 
 ```{r}
-lexicones <- readr::read_csv('data/lexicones.csv')
+lexicones <- readr::read_csv('https://raw.githubusercontent.com/gastonbecerra/curso-intro-r/main/data/lexicones.csv')
 summary(lexicones)
 ```
 Ahora sí: vamos a cruzar tablas! Particularmente, nos interesa ver si los lemmas que extrajimos de nuestras oraciones coinciden con los lemmas en los lexicones. 
@@ -172,12 +173,12 @@ Para poder comprender mejor lo que estamos evaluando, volvamos a incluir las ora
 ```{r message=FALSE}
 oraciones_lexicones %>%
   slice_max(order_by = valor, n = 10) %>%
-  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  inner_join(oraciones, by="doc_id") %>% # indicamos el par de columnas a usar para el cruce
   head(8)
 
 oraciones_lexicones %>%
   slice_min(order_by = valor, n = 10) %>%
-  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  inner_join(oraciones, by="doc_id") %>% # indicamos el par de columnas a usar para el cruce
   head(8)
 ```
 
@@ -189,13 +190,13 @@ Estamos otra vez en el momento iterativo de la exploración. Volvamos a probar i
 oraciones_lexicones %>%
   filter(cruzadas_n>2) %>%
   slice_max(order_by = valor, n = 10) %>%
-  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  inner_join(oraciones, by="doc_id") %>% # indicamos el par de columnas a usar para el cruce
   head(8)
 
 oraciones_lexicones %>%
   filter(cruzadas_n>2) %>%
   slice_min(order_by = valor, n = 10) %>%
-  inner_join(oraciones, by=c("doc_id"="id")) %>% # indicamos el par de columnas a usar para el cruce
+  inner_join(oraciones, by="doc_id") %>% # indicamos el par de columnas a usar para el cruce
   head(8)
 ```
 
@@ -277,11 +278,11 @@ Veamos este último objeto, para evaluar los resultados:
 ```{r}
 oraciones_txt_sentiment$overall %>% 
   slice_max(order_by = sentiment_polarity, n=10) %>%
-  left_join(oraciones, by=c("doc_id"="id"))
+  left_join(oraciones, by="doc_id")
 
 oraciones_txt_sentiment$overall %>% 
   slice_min(order_by = sentiment_polarity, n=10) %>%
-  left_join(oraciones, by=c("doc_id"="id"))
+  left_join(oraciones, by="doc_id")
 ```
 
 `txt_sentiment` suma los scores de las palabras por oración, lo que hace esperable que las oraciones más largas muestren una polaridad más extrema. Por ello tal vez convenga normalizar este score por la cantidad de palabras en cada oración:
@@ -290,10 +291,15 @@ oraciones_txt_sentiment$overall %>%
 oraciones_txt_sentiment$overall %>% 
   mutate(sentiment_polarity2=sentiment_polarity/terms) %>%
   slice_max(order_by = sentiment_polarity2, n=10) %>%
-  left_join(oraciones, by=c("doc_id"="id"))
+  left_join(oraciones, by="doc_id") %>%
+  select(sentiment_polarity2,oracion)
 
 oraciones_txt_sentiment$overall %>% 
   mutate(sentiment_polarity2=sentiment_polarity/terms) %>%
   slice_min(order_by = sentiment_polarity2, n=10) %>%
-  left_join(oraciones, by=c("doc_id"="id"))
+  left_join(oraciones, by="doc_id") %>%
+  select(sentiment_polarity2,oracion)
 ```
+
+Tiene bastante sentido, no?
+
