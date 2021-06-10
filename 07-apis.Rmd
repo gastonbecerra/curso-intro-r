@@ -1,0 +1,103 @@
+# Construcción de los datasets (BORRADOR)
+
+```{r message=FALSE, warning=FALSE}
+ 
+library(tidyverse) # para manipular tablas
+library(ggplot2)
+library(dplyr)
+library(tidytext)
+library(readr) 
+library(tidyverse) 
+library(udpipe)
+
+```
+
+En este tutorial vamos a explorar distintas maneras de construir un dataset.
+
+<!-- * Applicaciones, gamificación y experimentos digitales -->
+
+* APIs
+* Scrapping
+
+<!-- Además, hay sitios donde se puede buscar un dataset.  -->
+
+
+## APIs
+
+Un API (Application Programming Interface) es una "puerta de entrada" que algunas aplicaciones ofrecen para interatuar con sus datos y sus funciones de forma ordenada. 
+Se puede utilizar una API para recuperar contenido de las bases de datos de la aplicación (e.g., obtener tweets de Twitter) de forma legal y dentro de las condiciones de acceso y uso que la aplicación impone. 
+
+Generalmente, las API se utilizan a través del protocolo HTTP, de modo que se puede interactuar con ella a través desde distintos lenguajes y/o programas que nos permita hacer *requests* (acciones para leer, enviar y manipular datos) por internet, ya sea un navegador como Chrome, un programa específico como [Postman](https://learning.postman.com/), o R. 
+
+Cada API tiene su dirección URL, y una forma particular de requerir parámetros por medio de ella. Un ejemplo de un request simple que devuelve la información de una foto de Facebook es la siguiente URL, que se puede consultar desde el navegador: [https://graph.facebook.com/facebook/picture?redirect=false](https://graph.facebook.com/facebook/picture?redirect=false). 
+El resultado del request suelen ser datos planos, es decir, sin los elementos de diseño de la aplicación ni sus interfaces, y en un formato fácilmente legible, como CSV o JSON. En ocasiones, hay algunos metadatos en los encabezados que indican cómo resultó nuestros request por medio de un código (e.g., un status 200 significa que el request se procesó OK, mientras un 404 indica que el recurso que buscamos no está disponible).
+
+<!-- . Por ejemplo `http://url-de-la-api.com/objeto/accion?parametro=valor&parametro=valor`. -->
+
+Muchas APIs requieren una autenticación para poder procesar un request, esto les permite regular el acceso a la información. Para ello, en algunos casos basta con proveer algunas credenciales que obtenemos al registrarnos como usuarios de la aplicación. En otros casos, como en las APIs de Facebook y Twitter, además es necesario registrarse como "desarrollador" y  registrar una "aplicación" para la cual se piden ciertos permisos particulares, como leer o postear contenido. Como resultado de este registro generalmente obtenemos algunas "llaves" que incluimos en nuestros requests como parámetros. Otras APIs, como la de Google, tienen algunos servicios pagos y requieren que registremos una tarjeta de crédito en nuestro perfil, para cobrarnos por consumo.
+
+Por suerte, para algunas aplicaciones contamos con paquetes de R para interactuar con sus APIs. Estos paquetes se encargan de formatear los request de pedido de información, incluyendo las claves de seguridad que hayamos obtenido, y/o leer los datos que nos devuelven en un formato compatible con R, como un dataframe. 
+
+### API de Facebook
+
+<!-- https://www.doctormetrics.com/facebook-y-r-statistics-para-el-social-mining/ -->
+<!-- https://community.rstudio.com/t/how-to-analyze-your-facebook-friends-network-with-r/29403 -->
+<!-- https://developers.facebook.com/ads/blog/post/v2/2018/05/15/facebook-reach-frequency-api/ -->
+
+### API de Twitter (con rtweet)
+
+<!-- https://www.rdocumentation.org/packages/rtweet/versions/0.7.0/topics/search_tweets -->
+<!-- https://developer.twitter.com/en/docs/twitter-api/v1/tweets/search/api-reference/get-search-tweets -->
+<!-- https://www.earthdatascience.org/courses/earth-analytics/get-data-using-apis/use-twitter-api-r/ -->
+<!-- https://medium.com/@traffordDataLab/exploring-tweets-in-r-54f6011a193d -->
+
+```{r api twit}
+
+library(rtweet)
+
+registered_app <- "ScapperV2"
+api_key <- "YyPbiubFh5cuqvRQBXGoqvket"
+api_secret_key <- "6jpCtDgAH718M7GXI3yI8ZSKCoF6Vg3Zrg5OzO4a5jjF7OdFGT"
+access_token <- "495459189-nJIIICW6hQzTsq5pGyBrW0Ep9wVhgDqkcQoAVtcC"
+access_token_secret <- "sdRakLrsAGd9tsXNred4c4TGSTpJEPMYIjamwrLO38l7x"
+
+token <- create_token(
+  app = registered_app,
+  consumer_key = api_key,
+  consumer_secret = api_secret_key,
+  access_token = access_token,
+  access_secret = access_token_secret)
+
+tweets <- search_tweets(q = "#bigdata",n = 20,lang = "es", include_rts = FALSE)
+
+glimpse(tweets)
+
+# Preprocessing
+words <- tweets %>%
+  mutate(text = str_remove_all(text, "&amp;|&lt;|&gt;"),
+         text = str_remove_all(text, "\\s?(f|ht)(tp)(s?)(://)([^\\.]*)[\\.|/](\\S*)"),
+         text = str_remove_all(text, "[^\x01-\x7F]")
+         )
+
+clean_words <- words %>%
+  mutate(
+    # Get rid of @mentions
+    text = str_replace_all(text,"RT @[a-z,A-Z]*: ",""),
+    # Get rid of hashtags
+    text = str_replace_all(text,"#[a-z,A-Z]*",""),
+    # Get rid of @mentions
+    text = str_replace_all(text,"@[a-z,A-Z]*","")
+  )
+
+```
+
+
+### API de ???
+
+### API de ??? / via package
+
+## Scrapping
+
+### Scrapping Discursos Casa Rosada
+
+xxx
