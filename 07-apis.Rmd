@@ -1,17 +1,5 @@
 # Construcción de los datasets (BORRADOR)
 
-```{r message=FALSE, warning=FALSE}
- 
-library(tidyverse) # para manipular tablas
-library(ggplot2)
-library(dplyr)
-library(tidytext)
-library(readr) 
-library(tidyverse) 
-library(udpipe)
-
-```
-
 En este tutorial vamos a explorar distintas maneras de construir un dataset.
 
 <!-- * Applicaciones, gamificación y experimentos digitales -->
@@ -19,7 +7,7 @@ En este tutorial vamos a explorar distintas maneras de construir un dataset.
 * APIs
 * Scrapping
 
-<!-- Además, hay sitios donde se puede buscar un dataset.  -->
+Además, hay sitios donde se puede buscar datasets. Más info sobre esto abajo.
 
 
 ## APIs
@@ -30,15 +18,148 @@ Se puede utilizar una API para recuperar contenido de las bases de datos de la a
 Generalmente, las API se utilizan a través del protocolo HTTP, de modo que se puede interactuar con ella a través desde distintos lenguajes y/o programas que nos permita hacer *requests* (acciones para leer, enviar y manipular datos) por internet, ya sea un navegador como Chrome, un programa específico como [Postman](https://learning.postman.com/), o R. 
 
 Cada API tiene su dirección URL, y una forma particular de requerir parámetros por medio de ella. Un ejemplo de un request simple que devuelve la información de una foto de Facebook es la siguiente URL, que se puede consultar desde el navegador: [https://graph.facebook.com/facebook/picture?redirect=false](https://graph.facebook.com/facebook/picture?redirect=false). 
-El resultado del request suelen ser datos planos, es decir, sin los elementos de diseño de la aplicación ni sus interfaces, y en un formato fácilmente legible, como CSV o JSON. En ocasiones, hay algunos metadatos en los encabezados que indican cómo resultó nuestros request por medio de un código (e.g., un status 200 significa que el request se procesó OK, mientras un 404 indica que el recurso que buscamos no está disponible).
-
+El resultado del request suelen ser datos planos, es decir, sin los elementos de diseño de la aplicación ni sus interfaces, y en un formato mas flexible que el de tablas, como XML o JSON. 
+En ocasiones, hay algunos metadatos en los encabezados que indican cómo resultó nuestros request por medio de un código (e.g., un status 200 significa que el request se procesó OK, mientras un 404 indica que el recurso que buscamos no está disponible).
 <!-- . Por ejemplo `http://url-de-la-api.com/objeto/accion?parametro=valor&parametro=valor`. -->
 
 Muchas APIs requieren una autenticación para poder procesar un request, esto les permite regular el acceso a la información. Para ello, en algunos casos basta con proveer algunas credenciales que obtenemos al registrarnos como usuarios de la aplicación. En otros casos, como en las APIs de Facebook y Twitter, además es necesario registrarse como "desarrollador" y  registrar una "aplicación" para la cual se piden ciertos permisos particulares, como leer o postear contenido. Como resultado de este registro generalmente obtenemos algunas "llaves" que incluimos en nuestros requests como parámetros. Otras APIs, como la de Google, tienen algunos servicios pagos y requieren que registremos una tarjeta de crédito en nuestro perfil, para cobrarnos por consumo.
 
 Por suerte, para algunas aplicaciones contamos con paquetes de R para interactuar con sus APIs. Estos paquetes se encargan de formatear los request de pedido de información, incluyendo las claves de seguridad que hayamos obtenido, y/o leer los datos que nos devuelven en un formato compatible con R, como un dataframe. 
 
+En lo que sigue vamos a ver 3 APIs:
+
+1. Wikipedia, sin paquete, asi vemos como se ve una API "cruda" y nos familiarizamos con JSON;
+2. Facebook;
+3. Twitter, con el paquete `rtweet`.
+
+
+### API de Wikipedia (Sin paquetes!)
+
+La primera API que vamos a explorar es la de Wikipedia. 
+Nos interesa esta API por 2 razones: (1) no requiere autenticación... por lo menos para el tipo de request que vamos a estar haciendo; 
+y (2) no hay paquete de R para interactuar con ella, asi que vamos a usarla "sin rueditas".... aunque vale la aclaración, si vamos a usar un paquete para hacer requests por HTTP, llamado `httr`.
+
+Particularmente: 
+
+1. vamos a hacer un request, componiendo una URL y llamandola por GET (un método del protocolo HTTP, que usás todo el tiempo para navegar);
+2. vamos a leer el response, que está en formato JSON, y vamos a ver cómo lo podemos convertir a un formato más cómodo con R.
+
+Antes que nada, tenemos que saber qué clase de requests se pueden hacer (qué puedo preguntarle a la API). Todas las aplicaciones tienen una *API Reference* que aclara esto; otras, mas copadas, tienen una *API Explorer* que permite "componer" con formularios los parámetros de los requests y explorar los resultados. Wikipedia, por suerte es uno de ellos: <https://es.wikipedia.org/wiki/Especial:Zona_de_pruebas_de_la_API>.
+
+Lo primero que vamos a hacer es buscar entradas que incluyan las palabras "big data".
+
+Para hacer este request es necesario conocer como componer la URL. En el caso de Wikipedia esto se compone por una URL base (`https://es.wikipedia.org/w/api.php?`) seguido de la acción que nos interesa realizar: "query" porque vamos a buscar páginas (`&action=query`). 
+Esta acción requiere un criterio (`&srsearch=big%20data`) y que especifiquemos qué devolver y en qué formato (`&list=search&format=json`): 
+<https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=big%20data&format=json>
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+criterio <- "big%20data" # como es una URL hay que codificar algunos caracteres, como el espacio (%20)
+
+library(httr) # vamos usar este paquete para usar el protocolo HTTP
+llamada <- httr::GET(paste0("https://es.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch=", criterio)) # hacemos el request via HTTP/GET
+
+llamada$status_code # si es 200, todo OK
+
+```
+
+Veamos un pedazo de la respuesta, que se encuentra en formato JSON:
+
+    {
+      batchcomplete: "",
+      continue: {
+        sroffset: 10,
+        continue: "-||"
+      },
+      query: {
+        searchinfo: {
+          totalhits: 6783
+        },
+        search: [
+          {
+            ns: 0,
+            title: "Macrodatos",
+            pageid: 5242736,
+            size: 115077,
+            wordcount: 13491,
+            snippet: "también llamados datos masivos, inteligencia de datos, datos a gran escala o <span class="searchmatch">big</span> <span class="searchmatch">data</span> (terminología en idioma inglés utilizada comúnmente) es un término que",
+            timestamp: "2021-06-03T16:23:33Z"
+            },
+          {
+            ns: 0,
+            title: "Big Bang",
+            pageid: 6822,
+            size: 71060,
+            wordcount: 9270,
+            snippet: "En cosmología, se entiende por <span class="searchmatch">Big</span> Bang,[1]​[2]​ también llamada la Gran Explosión (término proveniente del astrofísico Fred Hoyle a modo de burla de",
+            timestamp: "2021-06-12T03:48:05Z"
+            },
+    ...
+
+
+Este contenido se puede acceder a través del `content` del objeto generado por `httr::GET`. Esta función convierte el JSON es una lista, es decir, una colección de objetos en R.
+
+Esta lista tiene 4 elementos: `batchcomplete` y `continue` se usan para paginar los resultados; `query` que a su vez tiene 2 elementos: primero informa cuantos resultados hubo; y despues en `search` incluye los resultados. Arriba mostramos 2 resultados, que incluyen un título, un pageid, y otra info.
+
+Veamos como podemos acceder a este JSON:
+
+```{r message=FALSE, warning=FALSE}
+
+respuesta <- httr::content(x = llamada) # httr nos lee el content del objeto que generamos
+
+class(respuesta) # chequeemos que es una lista
+
+str(respuesta, max=3) # veamos su estructura ... lo que nos interesa está en query > search
+
+resultados <- respuesta[["query"]][["search"]] # tomamos del objeto respuesta su objeto query, y luego su objeto "search"
+
+```
+
+La lista tiene dentro 1 lista por cada elemento (resultado). Como estas listas son iguales, podemos convertirlas a un formato tabla.
+
+```{r}
+
+library(dplyr) # para transformar la lista vamos a usar dplyr
+resultados_df <- dplyr::bind_rows(resultados) # vamos a separar las listas y unirlas en formato dataframe
+glimpse(resultados_df) # veamos la tabla armada
+
+
+```
+
+Ahora vamos a usar estos valores para recuperar los contenidos de las páginas. 
+
+Para esta acción la URL base es la misma que veniamos usando (`https://es.wikipedia.org/w/api.php?`) seguido de la acción que nos interesa realizar: "parse" porque le pedimos que imprima una pagina (`&action=parse`). 
+Esta acción requiere un criterio (`&page=`) con el título que querramos recuperar, y finalmente, que especifiquemos qué en qué formatos (`&list=search&format=json`). 
+
+Veamos los títulos que podemos recuperar y compongamos la URL con los primeros.
+
+```{r}
+
+resultados_df$title # veamos cuales son los primeros titulos
+
+criterio2 <- str_replace(string = resultados_df$title[1], pattern = " ", replacement = "_")  # llamemos al primer elemento, reemplazando espacios por _ .... esto hay que mejorarlo para encodear otros elementos, como acentos
+
+library(httr) # vamos usar este paquete para usar el protocolo HTTP
+llamada2 <- httr::GET(paste0("https://es.wikipedia.org/w/api.php?action=parse&prop=text&formatversion=2&format=json&page=", criterio2)) # hacemos el request via HTTP/GET
+
+llamada2$status_code # veamos si devuelve 200 == OK
+
+respuesta2 <- httr::content(x = llamada2) # httr nos lee el content del objeto que generamos
+
+class(respuesta2) # chequeemos que es una lista
+
+str(respuesta2, max=3) # veamos su estructura ... lo que nos interesa está en parse > text
+
+respuesta2[["parse"]][["text"]] %>% str_sub(start = 1, end = 500) # tomemos un fragmento
+
+```
+
+Lo que vemos es el código fuente (HTML) de esta página: <https://es.wikipedia.org/wiki/Macrodatos>
+
+
 ### API de Facebook
+
 
 <!-- https://www.doctormetrics.com/facebook-y-r-statistics-para-el-social-mining/ -->
 <!-- https://community.rstudio.com/t/how-to-analyze-your-facebook-friends-network-with-r/29403 -->
@@ -51,53 +172,103 @@ Por suerte, para algunas aplicaciones contamos con paquetes de R para interactua
 <!-- https://www.earthdatascience.org/courses/earth-analytics/get-data-using-apis/use-twitter-api-r/ -->
 <!-- https://medium.com/@traffordDataLab/exploring-tweets-in-r-54f6011a193d -->
 
+Twitter requiere **generar una aplicacion y registrarla en una cuenta de desarrollador**. Para es necesario:
+
+1. Registrarse en [Twitter developers](https://developer.twitter.com/en) y aplicar al acceso: https://developer.twitter.com/en/apply-for-access
+2. Crear un *proyecto*: https://developer.twitter.com/en/portal/projects/new
+
+Para esto te va a pedir que definas: tipo de proyecto (academico), descripcion (objetivos, posta), crear/vincularla a una app (va a pedir solo el nombre). Twitter aclara: *Apps are where you get your access keys and tokens and set permissions*.
+
+Luego, vamos a ir a la pagina de app que acabamos de crear, a buscar las credenciales para acceder:
+
+(Estamos usando el metodo de generar un *token*... pero hay otros: https://cran.r-project.org/web/packages/rtweet/vignettes/auth.html)
+
+3. Vamos a configurar las app permissions, que habilitan a distintas acciones, como buscar y leer tweets, o postear.
+4. Vasmo a configurar credenciales, yendo a "Keys and tokens"
+
+Aquí vamos a buscar "API Key and Secret" y "Access Token and Secret". Ambos tienen 2 claves: key y secret key. 
+
+
+```{r eval=FALSE}
+
+# estos datos son de ejemplo...
+
+api_key <- "afYS4vbIlPAj096E60c4W1fiK"
+api_secret_key <- "bI91kqnqFoNCrZFbsjAWHD4gJ91LQAhdCJXCj3yscfuULtNkuu"
+access_token <- "9551451262-wK2EmA942kxZYIwa5LMKZoQA4Xc2uyIiEwu2YXL"
+access_token_secret <- "9vpiSGKg1fIPQtxc5d5ESiFlZQpfbknEN1f1m2xe5byw7"
+
+```
+
+
+```{r include=FALSE, eval=TRUE}
+
+registered_app <- "twbdar"
+api_key <- "Vv6aNZHZzJCpRCCyzL4Xnoxx8"
+api_secret_key <- "G3jwPWwfq440jeYycX9noZFxHT0gyN9YSp613ZbJMqd85SgVbq"
+access_token <- "100533939-bqC5XcMPbmGtyEhSPINmpnMyGGhTNcOIYYBERN6F"
+access_token_secret <- "RNN2T6TPEbp7UTA8bCwdmXUOhPSCNotZLxixI5Ser0khH"
+
+```
+
+Con estas 4 claves mas el nombre de la app, ya podemos ir al codigo, a trabajar con el paquete `rtweet`. Vamos a registrar un *token* que queda en memoria y que el pack va a usar para autenticar cada pedido a twitter.
+
 ```{r api twit}
 
 library(rtweet)
-
-registered_app <- "ScapperV2"
-api_key <- "YyPbiubFh5cuqvRQBXGoqvket"
-api_secret_key <- "6jpCtDgAH718M7GXI3yI8ZSKCoF6Vg3Zrg5OzO4a5jjF7OdFGT"
-access_token <- "495459189-nJIIICW6hQzTsq5pGyBrW0Ep9wVhgDqkcQoAVtcC"
-access_token_secret <- "sdRakLrsAGd9tsXNred4c4TGSTpJEPMYIjamwrLO38l7x"
 
 token <- create_token(
   app = registered_app,
   consumer_key = api_key,
   consumer_secret = api_secret_key,
   access_token = access_token,
-  access_secret = access_token_secret)
-
-tweets <- search_tweets(q = "#bigdata",n = 20,lang = "es", include_rts = FALSE)
-
-glimpse(tweets)
-
-# Preprocessing
-words <- tweets %>%
-  mutate(text = str_remove_all(text, "&amp;|&lt;|&gt;"),
-         text = str_remove_all(text, "\\s?(f|ht)(tp)(s?)(://)([^\\.]*)[\\.|/](\\S*)"),
-         text = str_remove_all(text, "[^\x01-\x7F]")
-         )
-
-clean_words <- words %>%
-  mutate(
-    # Get rid of @mentions
-    text = str_replace_all(text,"RT @[a-z,A-Z]*: ",""),
-    # Get rid of hashtags
-    text = str_replace_all(text,"#[a-z,A-Z]*",""),
-    # Get rid of @mentions
-    text = str_replace_all(text,"@[a-z,A-Z]*","")
-  )
+  access_secret = access_token_secret) # creamos token de autenticacion en memoria
 
 ```
 
+Ahora ya estamos en condiciones de buscar tweets.
 
-### API de ???
+```{r api twit2, warning=FALSE}
 
-### API de ??? / via package
+library(tidyverse)
+tweets <- search_tweets(q = "#bigdata",n = 20,lang = "es", include_rts = FALSE)
+
+names(tweets)
+glimpse(tweets)
+
+```
+
+Además de buscar tweets hay otras funciones:
+
+```{r eval=FALSE}
+
+?rtweet::search_users() # busca usuarios
+?rtweet::get_trends()  # busca tendencias en algún lugar (por latitud y longitud)
+?rtweet::get_timeline() # busca los tweets de 1 o mas usuarios
+
+```
+
+Sobre los límites del API de Twitter: https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
 
 ## Scrapping
 
 ### Scrapping Discursos Casa Rosada
 
 xxx
+
+## Recursos
+
+* *LISTADO APIS*: https://github.com/public-apis/public-apis
+* *PORTAL DATASETS GOB.AR.*: https://datos.gob.ar/
+* *PORTAL DATASETS CABA*: https://data.buenosaires.gob.ar/
+* *API SPOTIFY*: https://developer.spotify.com/documentation/web-api/
+* *API WIKIPEDIA*: https://en.wikipedia.org/wiki/Help:Creating_a_bot#APIs_for_bots
+
+
+
+
+
+
+
+
+
