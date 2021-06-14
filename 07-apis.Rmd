@@ -1,4 +1,4 @@
-# Construcción de datasets (BORRADOR)
+# Construccion de datasets (BORRADOR)
 
 En este tutorial vamos a explorar distintas maneras de construir un dataset.
 

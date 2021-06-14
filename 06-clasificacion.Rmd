@@ -68,7 +68,7 @@ library(udpipe)
 modelo_sp <- udpipe_load_model(file = "../dix/spanish-gsd-ud-2.5-191206.udpipe")
 ```
 
-```{r}
+```{r anotar texto}
 oraciones_anotadas <- udpipe_annotate( 
   object = modelo_sp, # el modelo de idioma
   x = oraciones$oracion, # el texto a anotar, 
@@ -90,7 +90,7 @@ Con esta forma de preprocesar los datos de preprocesar los datos hemos "perdido"
 
 La vectorización es la estrategia aquí utilizada para transformar estos datos (provenientes del lenguaje natural) en una expresión de carácter matemático, de modo que sean entendibles por una computadora. Particularmente vamos a convertir a cada oración en una fila donde contamos qué/cuantas palabras hay en relación al vocabulario total. Hay muchas formas de realizar este objetivo. Aquí optamos por realizar un conteo de palabras con las funciones de `dplyr` que ya conocemos, y trasformaremos el objeto resultante a una *matriz de documentos por frecuencias* (o *dtm*) con `cast_dtm` del paquete `tidytext`.
 
-```{r message=FALSE, warning=FALSE}
+```{r armamos_dtm, message=FALSE, warning=FALSE}
 library(tidytext) # para manejar texto
 library(tm) # para vectorizar
 or_dtm <- oraciones_anotadas2 %>%
@@ -119,7 +119,7 @@ Aquí vamos a usar las funciones del paquete `caTools` para realizar este proced
 
 Pero antes deberemos hacer algunas transformaciones para que nuestro objeto tenga la forma requerida por `caTools`, una de las cuales es muy importante: vamos a reincluir la clase de oración (ahora como una variable de tipo factor).
 
-```{r message=FALSE, warning=FALSE}
+```{r split, message=FALSE, warning=FALSE}
 set.seed(100) # seteamos una semilla, para poder reproducir los resultados
 
 # transformamos nuestra matriz de la manera requerida por caTools
@@ -148,7 +148,7 @@ Como su nombre lo indica, un random forest se constituye a partir del "ensamble"
 Para generar el modelo utilizaremos el paquete `randomForest`, con la función homónima. Si bien hay muchos parámetros, aquí utilizaremos la función de la manera más simple: indicándo tan sólo cuáles son las variables a contemplar y la variable a predecir, y cuál es la tabla con la que debe trabajar (`data=or_train`). Para lo primero vamos a usar la notación de fórmula:  `clase_oracion ~ .`, donde indicamos que la variable de la izquierda (`clase_oracion`) depende (o es *función de*, `~`) las variables de la derecha, que en nuestro caso son todas las demás, de modo que las anotamos como `.`.
 
 
-```{r message=FALSE, warning=FALSE}
+```{r randomforest1, message=FALSE, warning=FALSE}
 library(randomForest) # cargamos la librería
 or_rf = randomForest(clase_oracion ~ ., data=or_train) # generar modelo
 ```
@@ -196,7 +196,7 @@ Veamos si nos va mejor con otro modelo, antes de empezar a hacer ajustes.
 
 Un algoritmo alternativo es `rpart`, que se puede extender con el paquete `rpart.plot` para generar visualizaciones del modelo. El código es igual al usado con random forest.
 
-```{r}
+```{r rpart1}
 library(rpart) # cargamos librería
 or_rpart <- rpart(clase_oracion~., data = or_train, method = 'class') # generamos el modelo
 or_rpart_predict <- predict(or_rpart, or_test, type = 'class') # # predecimos con tabla test, para evaluar contra real
@@ -231,8 +231,10 @@ Tengamos en cuenta que estamos alternado la base de datos con la que trabajamos 
 
 <!-- 1. OF, exolicar; 2. correr de vuelta los modelos; 3. casos nuevos -->
 
-```{r}
+```{r con oversamplig}
+
 library(ROSE) # cargamos la librería
+
 or_dmt_over <- ovun.sample(
   clase_oracion~., # vamos a usar la variable clase_oracion para generar la paridad
   data=or_dtm2, 
@@ -251,16 +253,16 @@ colnames(or_dmt_over) = make.names(colnames(or_dmt_over))
 division_over = sample.split(or_dmt_over$clase_oracion, SplitRatio = 0.7)
 or_train_over = subset(or_dmt_over, division_over==TRUE)
 or_test_over = subset(or_dmt_over, division_over==FALSE)
-# glimpse(or_test_over)
 
 # y finalmente, volvemos a incluir las etiquetas con forma de factor
 or_train_over$clase_oracion = as.factor(or_train_over$clase_oracion)
 or_test_over$clase_oracion = as.factor(or_test_over$clase_oracion)
+
 ```
 
 Veamos como resulta, volviendo a generar el modelo y las predicciones.
 
-```{r }
+```{r randomforest con over}
 or_rf_over = randomForest(clase_oracion ~ ., data=or_train_over)
 or_rf_predict_over = predict(or_rf_over, newdata=or_test_over)
 
@@ -326,7 +328,7 @@ Los resultados son mas o menos esperables con la división del dataset, no?
 
 Vamos entonces a seguir con el camino que ya conocemos: vamos a hacer el split entre training y test (acá no necesitamos hacer la transformación que hicimos antes ya que `or_dtm2` tiene la forma requerida por el algoritmo), y luego vamos a entrenar el modelo considerando esta nueva variable. Para esto vamos a usar la notación de función: `clase_oracion~.+clase_oracion`, donde indicamos que `clase_oracion` es *función de* `~.+clase_oracion` = todas las otras variables y además `sentiment_score`.
 
-```{r message=FALSE, warning=FALSE}
+```{r rpart con feat.eng, message=FALSE, warning=FALSE}
 # split entre training y test
 set.seed(100) # seteamos una semilla, para poder reproducir los resultados
 division = sample.split(or_dtm2$clase_oracion, SplitRatio = 0.7) # divide 70/30

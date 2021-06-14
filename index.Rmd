@@ -4,8 +4,7 @@ subtitle: "Una guía rápida para cientistas sociales."
 author: "Gastón Becerra y Juan Pablo López Alurralde"
 date: "`r Sys.Date()`"
 site: bookdown::bookdown_site
-output: 
-  bookdown::gitbook
+output: bookdown::gitbook
 download: no
 info: no
 documentclass: book
@@ -65,5 +64,6 @@ Recomendamos (¡y mucho!) los siguientes recursos introductorios a la ciencia de
 - [RStudio para Estadística Descriptiva en Ciencias Sociales
 ](https://bookdown.org/gboccardo/manual-ED-UCH/) de Giorgio Boccardo Bosoni y Felipe Ruiz Bruzzone
 - [R for Data Science (Español)](https://es.r4ds.hadley.nz/) Versión español del libro de Hadley Wickham y Garrett Grolemund.
+- Los videos de las clases del [laboratorio de datos](http://materias.df.uba.ar/lda2021c1/171-2/) del departamento de Física de la UBA son super instructivos, aunque refieran mayormente a Python.
 
 Además, te invitamos a que busques las comunidades de usuarios y usuarias de R mas cercanos a vos en el siguiente [mapa de Meetup](https://www.meetup.com/es/pro/r-user-groups/).
