@@ -20,15 +20,17 @@ description: "Curso intro de R"
 
 ## Objetivos {-}
 
-Estos recursos corresponden a un seminario de [sociología y epistemología del big data](https://www.academia.edu/48345036/Sociolog%C3%ADa_y_epistemolog%C3%ADa_del_Big_data) como un fenómeno tecnológico, social y cultural. El presente material corresponde a la unidad práctica de dicho seminario, que busca introducirnos en análisis de datos por medio del lenguaje R. Si bien este objetivo es explícitamente de nivel introductorio, creemos que puede ser un primer paso hacia un fin necesario: acercarnos al fenómeno de los datos, con una mirada *desde adentro*.
+Estos recursos corresponden a un seminario de [sociología y epistemología del big data](https://www.academia.edu/48345036/Sociolog%C3%ADa_y_epistemolog%C3%ADa_del_Big_data). 
+El presente material corresponde a la unidad práctica de dicho seminario, que busca introducirnos en análisis de datos por medio del lenguaje R. 
+Si bien este objetivo es explícitamente de nivel introductorio, creemos que puede ser un primer paso hacia un fin necesario: acercarnos al fenómeno de los datos, con una mirada "desde adentro".
 
 Escenarios sociales y técnicos como el big data, así como los avances en inteligencia artificial y la proliferación de algoritmos en diversas esferas de la vida social, entre otros fenómenos, están transformando la realidad social. Los y las científicas sociales no podemos ser ajenos a estas transformaciones. Debemos involucrarnos y trabajar junto a ingenieros, programadores, estadísticos, y otros profesionales, para que la mirada crítica y reflexiva que hemos desarrollado en nuestra formación profesional pueda ser incorporada. Y también para repensar y reevaluar nuestra propias maneras de hacer ciencia, y así actualizar y revitalizar aquello que hace únicas a las disciplinas sociales y humanísticas.
 
 ## Contenidos {-}
 
-El libro consta (por ahora) de 4 tutoriales. Los primeros 2 introducen a la programacion con R desde cero, y a lo básico del procesamiento del lenguaje natural; los últimos 2 introducen a 2 métodos de aprendizaje automático (*machine learning*), que nos permitirán ver *en chiquitito* implementaciones de los problemas que discutiremos teóricamente.
+El libro consta (por ahora) de 4 tutoriales. Los primeros 2 introducen a la programacion con R desde cero, y a lo básico del procesamiento del lenguaje natural; los últimos 2 introducen a 2 métodos de aprendizaje automático (*machine learning*), que nos permitirán ver implementaciones de los problemas que discutiremos teóricamente.
 
-Los materiales y casos prácticos se basan en fragmentos de nuestras propias investigaciones acerca del sentido social del big data [@Becerra2018]. Hemos optado por esta referencia a nuestros propios trabajos por dos razones: primero, porque nos va a permitir seguir en tema discutiendo acerca del big data; segundo, porque buscamos *abrir la cocina de la investigación* y tener la chance de discutir cómo las técnicas y los análisis que aquí presentamos pueden ser integrados en una investigación social.
+Los materiales y casos prácticos se basan en fragmentos de nuestras propias investigaciones acerca del sentido social del big data [@Becerra2018]. Hemos optado por esta referencia a nuestros propios trabajos por dos razones: primero, porque nos va a permitir seguir en tema discutiendo acerca del big data; segundo, porque buscamos abrir "la cocina de la investigación" para tener la chance de discutir cómo las técnicas y los análisis que aquí presentamos pueden ser integrados en una investigación social.
 
 ### Tutorial #1. Explorar, manipular y visualizar datos {-}
 
@@ -48,6 +50,10 @@ En este tutorial veremos una técnica de entrenamiento no supervisado, denominad
 ### Tutorial #4. Entrenamiento supervisado: Clasificación {-}
 
 En este tutorial veremos cómo *entrenar un modelo para clasificar texto*, particularmente, oraciones acerca del big data en positivas / negativas, a partir de otras oraciones ya clasificadas por humanos. Este tipo de tareas genera un modelo con reglas (en nuestro caso, de clasificacion) a partir de registrar patrones diferenciales para las clases de datos que servimos. Esta tarea retoma la pregunta planteada en el tutorial #2 por la polaridad del big data.
+
+### Tutorial #5. Construcción de datasets (BORRADOR) {-}
+
+En este tutorial veremos cómo *construir un dataset*, a partir de *interactuar con APIs* (particularmente, Wikipedia y Twitter) y de realizar *webscraping* (particularmente, sobre el sistema de publicación OJS).
 
 ## Otros recursos {-}
 

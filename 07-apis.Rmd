@@ -1,13 +1,16 @@
-# Construcción de los datasets (BORRADOR)
+# Construcción de datasets (BORRADOR)
 
 En este tutorial vamos a explorar distintas maneras de construir un dataset.
 
 <!-- * Applicaciones, gamificación y experimentos digitales -->
 
-* APIs
-* Scrapping
+1. Vamos a conectar con una API (Wikipedia) de la manera más básica;
+2. Vamos a conectar con una API (Twitter) usando el paquete `rtweet`;
+3. Mencionamos las limtaciones de la API de Facebook;
+4. Hacemos *scrapping* para recuperar contenido de páginas web tipo OJS.
 
-Además, hay sitios donde se puede buscar datasets. Más info sobre esto abajo.
+Al final listamos algunos otros recursos donde se pueden obtener datasets.
+
 
 
 ## APIs
@@ -17,20 +20,17 @@ Se puede utilizar una API para recuperar contenido de las bases de datos de la a
 
 Generalmente, las API se utilizan a través del protocolo HTTP, de modo que se puede interactuar con ella a través desde distintos lenguajes y/o programas que nos permita hacer *requests* (acciones para leer, enviar y manipular datos) por internet, ya sea un navegador como Chrome, un programa específico como [Postman](https://learning.postman.com/), o R. 
 
-Cada API tiene su dirección URL, y una forma particular de requerir parámetros por medio de ella. Un ejemplo de un request simple que devuelve la información de una foto de Facebook es la siguiente URL, que se puede consultar desde el navegador: [https://graph.facebook.com/facebook/picture?redirect=false](https://graph.facebook.com/facebook/picture?redirect=false). 
-El resultado del request suelen ser datos planos, es decir, sin los elementos de diseño de la aplicación ni sus interfaces, y en un formato mas flexible que el de tablas, como XML o JSON. 
-En ocasiones, hay algunos metadatos en los encabezados que indican cómo resultó nuestros request por medio de un código (e.g., un status 200 significa que el request se procesó OK, mientras un 404 indica que el recurso que buscamos no está disponible).
-<!-- . Por ejemplo `http://url-de-la-api.com/objeto/accion?parametro=valor&parametro=valor`. -->
+Cada API tiene su dirección URL, y una forma particular de requerir parámetros por medio de ella. Un ejemplo de un request simple que devuelve la información de una foto de Facebook es la siguiente URL, que se puede consultar desde el navegador: <https://graph.facebook.com/facebook/picture?redirect=false>.
+
+<!-- `http://url-de-la-api.com/objeto/accion?parametro=valor&parametro=valor`. -->
+
+El *response*  o resultado del request es sólo datos, es decir, contenido de la aplicación sin los elementos de diseño o interfaces. 
+Generalmente los datos se escriben en un formato flexible, como XML o JSON. 
+En ocasiones, hay algunos metadatos en los encabezados de las responses que indican cómo resultó nuestros request por medio de un código (e.g., un status 200 significa que el request se procesó OK, mientras un 404 indica que el recurso que buscamos no está disponible).
 
 Muchas APIs requieren una autenticación para poder procesar un request, esto les permite regular el acceso a la información. Para ello, en algunos casos basta con proveer algunas credenciales que obtenemos al registrarnos como usuarios de la aplicación. En otros casos, como en las APIs de Facebook y Twitter, además es necesario registrarse como "desarrollador" y  registrar una "aplicación" para la cual se piden ciertos permisos particulares, como leer o postear contenido. Como resultado de este registro generalmente obtenemos algunas "llaves" que incluimos en nuestros requests como parámetros. Otras APIs, como la de Google, tienen algunos servicios pagos y requieren que registremos una tarjeta de crédito en nuestro perfil, para cobrarnos por consumo.
 
 Por suerte, para algunas aplicaciones contamos con paquetes de R para interactuar con sus APIs. Estos paquetes se encargan de formatear los request de pedido de información, incluyendo las claves de seguridad que hayamos obtenido, y/o leer los datos que nos devuelven en un formato compatible con R, como un dataframe. 
-
-En lo que sigue vamos a ver 3 APIs:
-
-1. Wikipedia, sin paquete, asi vemos como se ve una API "cruda" y nos familiarizamos con JSON;
-2. Facebook;
-3. Twitter, con el paquete `rtweet`.
 
 
 ### API de Wikipedia (Sin paquetes!)
@@ -52,7 +52,7 @@ Para hacer este request es necesario conocer como componer la URL. En el caso de
 Esta acción requiere un criterio (`&srsearch=big%20data`) y que especifiquemos qué devolver y en qué formato (`&list=search&format=json`): 
 <https://es.wikipedia.org/w/api.php?action=query&list=search&srsearch=big%20data&format=json>
 
-```{r message=FALSE, warning=FALSE}
+```{r wiki1, message=FALSE, warning=FALSE}
 library(tidyverse)
 
 criterio <- "big%20data" # como es una URL hay que codificar algunos caracteres, como el espacio (%20)
@@ -134,7 +134,7 @@ Esta acción requiere un criterio (`&page=`) con el título que querramos recupe
 
 Veamos los títulos que podemos recuperar y compongamos la URL con los primeros.
 
-```{r}
+```{r wiki2}
 
 resultados_df$title # veamos cuales son los primeros titulos
 
@@ -157,14 +157,6 @@ respuesta2[["parse"]][["text"]] %>% str_sub(start = 1, end = 500) # tomemos un f
 
 Lo que vemos es el código fuente (HTML) de esta página: <https://es.wikipedia.org/wiki/Macrodatos>
 
-
-### API de Facebook
-
-
-<!-- https://www.doctormetrics.com/facebook-y-r-statistics-para-el-social-mining/ -->
-<!-- https://community.rstudio.com/t/how-to-analyze-your-facebook-friends-network-with-r/29403 -->
-<!-- https://developers.facebook.com/ads/blog/post/v2/2018/05/15/facebook-reach-frequency-api/ -->
-
 ### API de Twitter (con rtweet)
 
 <!-- https://www.rdocumentation.org/packages/rtweet/versions/0.7.0/topics/search_tweets -->
@@ -172,7 +164,7 @@ Lo que vemos es el código fuente (HTML) de esta página: <https://es.wikipedia.
 <!-- https://www.earthdatascience.org/courses/earth-analytics/get-data-using-apis/use-twitter-api-r/ -->
 <!-- https://medium.com/@traffordDataLab/exploring-tweets-in-r-54f6011a193d -->
 
-Twitter requiere **generar una aplicacion y registrarla en una cuenta de desarrollador**. Para es necesario:
+Twitter requiere generar una *aplicacion* y registrarla en una *cuenta de desarrollador*. Para es necesario:
 
 1. Registrarse en [Twitter developers](https://developer.twitter.com/en) y aplicar al acceso: https://developer.twitter.com/en/apply-for-access
 2. Crear un *proyecto*: https://developer.twitter.com/en/portal/projects/new
@@ -250,24 +242,150 @@ Además de buscar tweets hay otras funciones:
 
 Sobre los límites del API de Twitter: https://developer.twitter.com/en/docs/twitter-api/v1/rate-limits
 
-## Scrapping
+### Una nota sobre la API de Facebook
 
-### Scrapping Discursos Casa Rosada
+<!-- https://www.doctormetrics.com/facebook-y-r-statistics-para-el-social-mining/ -->
+<!-- https://community.rstudio.com/t/how-to-analyze-your-facebook-friends-network-with-r/29403 -->
+<!-- https://developers.facebook.com/ads/blog/post/v2/2018/05/15/facebook-reach-frequency-api/ -->
 
-xxx
+Facebook impuso serias limitaciones a la información que es posible consultar via API. 
+
+Al igual que Twitter, Facebook requiere registrar una app. Pero, los tipos de apps que se sugieren y los permisos a otorgar, son indicativos del poco acceso que se puede obtener a los contenidos de la red social para investigación, dejando la API mayormente para interactuar y controlar campañas y negocios: <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/app-types>.
+
+Lo más cercano que hay al *feed* de contenido social publicado por los usuarios, se limita a las páginas de las empresas, para lo que hay que tener una cuenta de negocios asociada a la página, y además someterse a una revisión de la app.  <https://developers.facebook.com/docs/permissions/reference/pages_read_user_content/>
+
+En contrapartida, Facebook ofrece algunos datasets: <https://research.fb.com/data/>
+
+Mas info: <https://theconversation.com/facebooks-data-lockdown-is-a-disaster-for-academic-researchers-94533>
+
+Como resultado de estos cambios, uno de los paquetes más usados para interactuar con el API de Facebook para R (<https://github.com/pablobarbera/Rfacebook>) ya no se mantiene más...
+
+
+## Web Scraping
+
+El proceso de recuperar contenido de manera automática a partir de páginas web se conoce como *Web Scraping*.
+
+Para poder recuperar contenido de páginas web hay *2 requisitos*: tenemos que averiguar:
+
+1. las URLs de las páginas que queremos leer: en muchos casos pueden ser URLs dinámicas, con parámetros y valores, que podemos manipular.
+2. la estructura HTML de la página donde está el contenido: como probablemente no nos interese *todo el contenido de la página* (logos,textos,botones) sino sólo algunos textos, tenemos que poder identificar en qué parte del template de la página se insertan los contenidos que nos interesa, para así poder mapearlos.
+
+
+Ambas informaciones varían de sitio en sitio y de sistema en sistema. Para lo primero conviene entender lo básico de la sintáxis de las URLs: <https://en.wikipedia.org/wiki/URL#Syntax>; para lo segundo, comprender lo básico de HTML markup <https://en.wikipedia.org/wiki/HTML#Markup>, incluyendo como tomar los identificadores de un pedazo de sitio <https://towardsdatascience.com/web-scraping-in-r-using-rvest-and-selectorgadget-5fc5124547e>, algo para lo que el Dev.Tools del Chrome (F12 navegando la página) puede ser muy util.
+
+### Webscraping resultados de búqsqueda de OJS 
+
+Open Journal Systems (OJS) es un sistema de manejo editorial para revistas académicas. Es usado mayormente por universidades y por revistas que no tienen acuerdos editoriales con grandes empresas.
+
+En este tutorial vamos a intentar recuperar los links a los artículos sobre "big data" que estén publicados en un listado de revistas que utilizan el sistema OJS:
+
+```{r}
+
+sitios_ojs = c(
+  "http://ojs.sociologia-alas.org/index.php/CyC/",
+  "http://ediciones.ucsh.cl/ojs/index.php/TSUCSH/",
+  #"https://revistachasqui.org/index.php/chasqui/", # tiene muchos resultados
+  "http://revistamexicanadesociologia.unam.mx/index.php/rms/"
+  )
+
+```
+
+Nuestro **primer requisito** es averiguar las URLs de las páginas que queremos leer. 
+
+Recordemos que queremos encontrar sólo artículos que contengan "big data", de modo que necesitamos utilizar la función de búsqueda de cada OJS. Luego de realizar algunas búsqueda "a mano" y obsevar cómo el OJS construye sus URLs (<https://docs.pkp.sfu.ca/dev/documentation/en/architecture-routes>), podemos armar las de los resultados de búsqueda:
+
+```{r}
+
+criterio <- "%22big+data%22"
+url_scrapear <- paste( sitios_ojs , # vamos a contatenar pedazos de textos
+                       "search/search?query=",
+                       criterio,
+                       sep = "")
+url_scrapear
+
+```
+
+Ya tenemos listo el primer requisito: las URLs de las páginas a leer! 
+
+Nuestro **segundo requisito** es encontrar algún patrón para identificar el pedazo de contenido que nos interesa. En nuestro caso, se trata de los links a los artículos, de modo que, otra vez, tenemos que ver cómo se componen las URLs del OJS. Según su convención, los artículos en OJS tienen una URL con esta estructura: url_sitio + "/article/view/" + id_artículo. Con XPath, podemos escribir una expresión que filtre este tipo de link: `//a[contains(@href, "/article/view/")]`.
+
+Ya tenemos listo el primer requisito: el patrón para identificar el contenido! 
+
+Ahora vamos a podemos comenzar con el scraping. Aquí vamos a ayudarnos con el paquete `rvest`. 
+
+```{r}
+
+library(rvest)
+
+tomar_links_resultados <- function( url ) {
+  url_con <- url(url, "rb") # abrimos una conexion para leer la pagina
+  webpage <- xml2::read_html(url_con) # leemos la pagina
+  close(url_con) # cerramos la conexion
+  xpath <- '//a[contains(@href, "/article/view/")]' # XPath para distinguir links a artículos
+  links <- rvest::html_nodes(webpage, xpath = xpath) %>% # leemos los pedazos de codigo de links
+    html_attr('href') %>% # nos quedamos solo con la URL de los links
+    return()
+}
+
+links_articulos <- character()
+
+for (i in 1:length(url_scrapear)) { # vamos a ejecutar un bucle, donde i toma el valor del indice del array de URLs a visitar
+  message("scrapeando ",url_scrapear[i]) # que nos muestre en pantalla por donde anda
+  links_articulos <- c(links_articulos, tomar_links_resultados(url_scrapear[i]))
+}
+
+links_articulos
+
+```
+
+Listo, tenemos los links de los artículos donde dice "big data" en varias revistas distintas. Ahora, seguro nos interese hacer un nuevo proceso de scraping para recuperar algunos metadatos de esos artículos. Pero para eso, mejor usemos el paquete `ojsr`.
+
+```{r}
+
+library(ojsr)
+
+metadata <- ojsr::get_html_meta_from_article(input_url = links_articulos, verbose = TRUE)
+
+glimpse(metadata)
+
+metadata %>% 
+  filter(
+      meta_data_name=="citation_keywords", 
+      trimws(meta_data_content)!=""
+    ) %>% # filtering keywords
+  mutate(keyword = trimws(tolower(meta_data_content))) %>%
+  count(keyword, sort = TRUE) 
+
+```
+
+Además de recuperar metadatos del HTML de los OJS, el paquete permite:
+
+```{r eval=FALSE}
+
+?ojsr::get_issues_from_archive() # busca numeros de la revista
+?ojsr::get_articles_from_issue() # busca artículos de un número de la revista
+?ojsr::get_galleys_from_article() # toma las galeradas (los pdf, xml, epub, y demas)
+
+```
+
 
 ## Recursos
 
+### Listado de APIs:
+
 * *LISTADO APIS*: https://github.com/public-apis/public-apis
-* *PORTAL DATASETS GOB.AR.*: https://datos.gob.ar/
-* *PORTAL DATASETS CABA*: https://data.buenosaires.gob.ar/
 * *API SPOTIFY*: https://developer.spotify.com/documentation/web-api/
 * *API WIKIPEDIA*: https://en.wikipedia.org/wiki/Help:Creating_a_bot#APIs_for_bots
 
+### Repositorios de datasets:
 
+* *PORTAL DATASETS GOB.AR.*: https://datos.gob.ar/
+* *PORTAL DATASETS CABA*: https://data.buenosaires.gob.ar/
+* *DATASETS FACEBOOK*: https://research.fb.com/data/
 
+### Herrameintas de Scraping:
 
-
+* *GOOGLE SHEETS*: https://www.youtube.com/watch?v=OygCWEmNjyw
 
 
 
