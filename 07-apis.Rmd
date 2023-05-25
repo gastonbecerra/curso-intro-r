@@ -5,9 +5,8 @@ En este tutorial vamos a explorar distintas maneras de construir un dataset.
 <!-- * Applicaciones, gamificación y experimentos digitales -->
 
 1. Vamos a conectar con una API (Wikipedia) de la manera más básica;
-2. Vamos a conectar con una API (Twitter) usando el paquete `rtweet`;
-3. Mencionamos las limtaciones de la API de Facebook;
-4. Hacemos *scrapping* para recuperar contenido de páginas web tipo OJS.
+2. Mencionamos las limtaciones de la API de Facebook;
+3. Hacemos *scrapping* para recuperar contenido de páginas web tipo OJS.
 
 Al final listamos algunos otros recursos donde se pueden obtener datasets.
 
