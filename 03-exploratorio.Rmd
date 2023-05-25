@@ -246,7 +246,7 @@ Vamos a utilizar el comando `message()` para que al correr la función se muestr
 analisis_proto <- function (tabla_evocaciones, frecuencia_minima = 2,  criterio_corte = "media") {
   
   # (paso 1) tabla de frecuencias
-  asoc_frecuentes <- asociaciones %>% 
+  asoc_frecuentes <- tabla_evocaciones %>% 
     group_by(palabra) %>% 
     summarize( 
       freq = n(), 
@@ -277,7 +277,7 @@ analisis_proto <- function (tabla_evocaciones, frecuencia_minima = 2,  criterio_
     freq < freq_cut & orden_media < orden_cut ~ 3,
     freq < freq_cut & orden_media >= orden_cut ~ 4 
   )
-  ) %>% arrange(segmento, desc(freq,orden_media))
+  ) %>% arrange(segmento, desc(freq),desc(orden_media))
   
   # (paso 5) vamos a contar las palabras en cada segmento y lo mostramos en pantalla
   palabras_por_segmento <- prototipico %>% 
