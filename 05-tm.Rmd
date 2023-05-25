@@ -15,7 +15,7 @@ A lo largo de este tutorial trabajaremos con varias librerías, que podemos inst
 
 ```{r eval=FALSE}
 install.packages(c("readr", "tidyverse", "tidytext", "udpipe")) # las hemos instalado en capítulos anteriores
-install.packages(c("topicmodels", "stopwords", )) # las usaremos por primera vez
+install.packages(c("topicmodels", "stopwords")) # las usaremos por primera vez
 ```
 
 
@@ -231,7 +231,8 @@ noticias_tm_beta %>% # principales términos en cada tópico
   ggplot(aes(x=reorder(term, (beta)),y=beta)) + 
     geom_col() +
     facet_wrap(~topic, scales = "free_y") +
-  coord_flip()
+  coord_flip() +
+  theme_minimal()
 ```
 
 El objetivo del análisis que haremos (manualmente) sobre estos datos es el de evaluar si hay un campo coherente de palabras en cada tópico, para luego asignarle una etiqueta que lo describa. En tanto estas son todas inferencias nuestras, en el mejor de los casos, guidados por nuestro conocimiento teórico del fenómeno, nos ubicamos en el plano de las hipótesis. 
@@ -239,21 +240,21 @@ El objetivo del análisis que haremos (manualmente) sobre estos datos es el de e
 Veamos esto con nuestros datos, tendiendo en mente el criterio de construcción del corpus (noticias que incluyen "big data"):
 
 * Tópico 1: dato, información, empresa, usuario, millón, personas e internet son nociones que nos remiten a redes sociales y plataformas. Esta es una interpretación (hipotética) de las palabras en relación a los conceptos de la datificación y el big data social [@VanDijck2014];
-* Tópico 2: campañana, político, gobierno, elección nos permiten inferir el campo de las elecciones políticas;
-* Tópico 3: bigdata, saber, entender, tiempo, estadística y conocimiento nos permiten suponer que se trata de la "promesa epistémica" del big data, es decir, de su vinculación con la generación de conocimiento novedoso [@Becerra2018];
-* Tópico 4: vida, mismo, nuevo, humano son expresiones esperables en artículos críticos de los avances tecnológicos;
-* Tópico 5: negocio, tecnología, trabajo, innovación son términos que podrían corresponder a noticias sobre el mercado laboral y las empresas;
-* Tópico 6: equipo, tiempo, sensor, ciudad no parece permitirnos inferir un campo semántico muy coherente sino más bien un conjunto de artículos de áreas diversas en las que ha impactado la datificación.
+* Tópico 2: vida, mismo, nuevo, humano son expresiones esperables en artículos críticos de los avances tecnológicos;
+* Tópico 3: campañana, político, gobierno, elección nos permiten inferir el campo de las elecciones políticas;
+* Tópico 4: negocio, tecnología, trabajo, innovación son términos que podrían corresponder a noticias sobre el mercado laboral y las empresas;
+* Tópico 5: equipo, tiempo, sensor, ciudad no parece permitirnos inferir un campo semántico muy coherente sino más bien un conjunto de artículos de áreas diversas en las que ha impactado la datificación.
+* Tópico 6: bigdata, saber, entender, tiempo, estadística y conocimiento nos permiten suponer que se trata de la "promesa epistémica" del big data, es decir, de su vinculación con la generación de conocimiento novedoso [@Becerra2018];
 
 Vamos a escribir estas etiquetas en un array de nombres de tópicos, por si necesitamos incluirlos en futuros gráficos como etiquetas:
 
 ```{r}
 topicos_nombres <- rbind( 
   c(topic = 1 , nombre = "1. Redes sociales"),
-  c(topic = 2 , nombre = "2. Elecciones"),
-  c(topic = 3 , nombre = "3. Conocimiento"),
-  c(topic = 4 , nombre = "4. Críticas"),
-  c(topic = 5 , nombre = "5. Negocios y trabajo"),
+  c(topic = 2 , nombre = "2. Críticas"),
+  c(topic = 3 , nombre = "3. Elecciones"),
+  c(topic = 4 , nombre = "4. Negocios y trabajo"),
+  c(topic = 5 , nombre = "5. Conocimiento"),
   c(topic = 6 , nombre = "6. Datificación")
 ) %>% as_tibble() %>% mutate(topic=as.integer(topic))
 ```
