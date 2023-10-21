@@ -10,7 +10,7 @@ Para usar **R** y **RStudio** hay dos posibilidades:
 
 -   Instalar el lenguaje y el IDE en tu computadora.
 
-## Usar R y RStudio en la nube
+## Usar R y RStudio en la nube {.unnumbered}
 
 Posit Cloud es una aplicación en la nube que te ofrece un entorno de R para que utilices, y te permite manejar proyectos con distintos IDES (RStudio), sin que te tengas que instalar nada.
 
@@ -29,10 +29,6 @@ Una vez que hayas descargado e instalado R, ya estarías en condiciones de intro
 El entorno más usado es [RStudio, cuya versión de escritorio se puede descargar gratuitamente](https://posit.co/downloads/).
 
 Otra opción es usar el popular [Visual Studio Code con un plugin](https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r).
-
-<!-- ```{block, type='rmdcomment'} -->
-
-> ¿Te estás mareando y preferís una explicación en video? [Video: Diferencias entre RStudio, R Markdown y R Notebook - 2020](https://www.youtube.com/watch?v=y7JPGlw6dJg)
 
 ## Scripts, Notebooks y Markdown {.unnumbered}
 

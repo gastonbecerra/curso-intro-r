@@ -197,7 +197,7 @@ En este tutorial vamos a intentar recuperar los links a los artículos sobre "bi
 
 sitios_ojs = c(
   "http://ojs.sociologia-alas.org/index.php/CyC/",
-  "http://ediciones.ucsh.cl/ojs/index.php/TSUCSH/",
+  #"http://ediciones.ucsh.cl/ojs/index.php/TSUCSH/", # se suele caer...
   #"https://revistachasqui.org/index.php/chasqui/", # tiene muchos resultados
   "http://revistamexicanadesociologia.unam.mx/index.php/rms/"
   )
