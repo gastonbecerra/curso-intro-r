@@ -1,30 +1,45 @@
-# Entorno {-}
+# Entorno {.unnumbered}
 
-## Instalación de Lenguaje R  {-}
+**R** es un lenguaje de programación pensado para computación estadística, que se distribuye de forma libre y gratuita bajo licencia GNU, y que corre en distintas plataformas y sistemas operativos.
 
-R es un lenguaje de programación pensado para computación estadística, que se distribuye de forma libre y gratuita bajo licencia GNU, y que corre en distintas plataformas y sistemas operativos. 
+**RStudio** es un programa aparte, que te provee un un entorno gráfico (o *IDE*) que facilita varias cosas, como la edición de código con coloreado y ayuda para autocompletado, organizar fácilmente los archivos, visualizar objetos en memoria, recurrir a la ayuda, etc.
 
-Para correr R es necesario instalar el **entorno que ejecuta el lenguaje**. 
-Para ello tenés que descargar la última versión desde alguna copia regional (o *mirror*) del [CRAN: El archivo oficial de R](https://cran.r-project.org/mirrors.html) como, por ejemplo, la que aloja la [Universidad Nacional de La Plata](http://mirror.fcaglp.unlp.edu.ar/CRAN/), en Argentina.
+Para usar **R** y **RStudio** hay dos posibilidades:
+
+-   Usar la versión *cloud* a través de un navegador (e.g., Chrome o Firefox) sin instalar nada
+
+-   Instalar el lenguaje y el IDE en tu computadora.
+
+## Usar R y RStudio en la nube
+
+Posit Cloud es una aplicación en la nube que te ofrece un entorno de R para que utilices, y te permite manejar proyectos con distintos IDES (RStudio), sin que te tengas que instalar nada.
+
+Para eso, tenés que entrar a <https://posit.cloud/>, generar una cuentra gratuita, y seleccionar un nuevo proyecto.
+
+## Instalación local de Lenguaje R e Interface RStudio {.unnumbered}
+
+Para correr R es necesario instalar el **entorno que ejecuta el lenguaje**. Para ello tenés que descargar la última versión desde alguna copia regional (o *mirror*) del [CRAN: El archivo oficial de R](https://cran.r-project.org/mirrors.html) como, por ejemplo, la que aloja la [Universidad Nacional de La Plata](http://mirror.fcaglp.unlp.edu.ar/CRAN/), en Argentina.
 
 <!-- ```{block, type='rmdcomment'} -->
+
 > ¿No estás acostumbrado a instalar programas y preferís ver el proceso antes de meter mano? [Video: Cómo Descargar e Instalar R y RStudio - 2020](https://www.youtube.com/watch?v=D9Bp11iZssc)
 
-## Instalación de Interface RStudio  {-}
+Una vez que hayas descargado e instalado R, ya estarías en condiciones de introducir comandos en lenguaje R a través de la *consola*. No obstante, esto es muy rudimentario. Para trabajar generalmente se utiliza un programa adicional, un entorno gráfico (o *IDE*).
 
-Una vez que hayas descargado e instalado R, ya estarías en condiciones de introducir comandos en lenguaje R a través de la *consola*. No obstante, esto es muy rudimentario. 
-Para trabajar generalmente se utiliza un programa adicional, un entorno gráfico (o *IDE*) que facilita varias cosas, como la edición de código con coloreado y ayuda para autocompletado, organizar fácilmente los archivos, visualizar objetos en memoria, recurrir a la ayuda, etc. 
-El entorno más usado es [RStudio, cuya versión de escritorio se puede descargar gratuitamente](https://rstudio.com/products/rstudio/download/#download). 
-Además, hay una versión online con un plan gratuito que tiene los recursos suficientes para correr los ejemplos que vamos a ver en los tutoriales: [RStudio Cloud](https://rstudio.cloud/plans/free)
+El entorno más usado es [RStudio, cuya versión de escritorio se puede descargar gratuitamente](https://posit.co/downloads/).
 
 Otra opción es usar el popular [Visual Studio Code con un plugin](https://marketplace.visualstudio.com/items?itemName=Ikuyadeu.r).
 
-## Notebooks y Markdown {-}
-
-Otra forma de ejecutar R es a través de *Notebooks*, documentos mixtos que mezclan bloques o *chunks* de código y texto. Las notebooks pueden ser muy cómodas para escribir informes (¡incluso algunos más complejos como este libro!) y para ejecutar código registrando tus comentarios, ya que podés ejecutar un bloque y ver el resultado debajo. 
-Sin embargo, carecen de algunas funciones que tienen los IDEs como RStudio que pueden ser muy útiles cuando estás aprendiendo, como por ejemplo, una lista de objetos en memoria con visores integrados (por ejemplo, para ver una tabla).
-
-Los notebooks permiten el uso de *Markdown*, un lenguaje de marcado (o más simplemente: una convención de escritura) que permite introducir formato usando símbolos. Por ejemplo, para poner una palabra en **negrita** simplemente se la envuelve en 2 asteriscos de cada lado; para ponerla en *cursiva/itálica*, se la envuelve en 1 asterisco de cada lado; para mostrar `código`, se utilizan *backtics* (`). Acá hay una [viñeta con las marcas más comunes](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf). RStudio soporta markdown y permite exportar el documento en distintos formatos, como HTML, pdf, slides, etc. Generalmente también podés incluir HTML.
-
 <!-- ```{block, type='rmdcomment'} -->
+
 > ¿Te estás mareando y preferís una explicación en video? [Video: Diferencias entre RStudio, R Markdown y R Notebook - 2020](https://www.youtube.com/watch?v=y7JPGlw6dJg)
+
+## Scripts, Notebooks y Markdown {.unnumbered}
+
+Generalmente, el código lo vamos a guardar en un *script*, que contiene las operaciones (líneas de código) que queremos ejecutar. Generalmente, estos scripts se guardan en proyectos, junto con fuentes de datos y reportes resultantes.
+
+Otra forma de ejecutar R es a través de *Notebooks*, documentos mixtos que mezclan bloques o *chunks* de código y texto. Las notebooks pueden ser muy cómodas para escribir informes (¡incluso algunos más complejos como este libro!) y para ejecutar código registrando tus comentarios, ya que podés ejecutar un bloque y ver el resultado debajo. Sin embargo, carecen de algunas funciones que tienen los IDEs como RStudio que pueden ser muy útiles cuando estás aprendiendo, como por ejemplo, una lista de objetos en memoria con visores integrados (por ejemplo, para ver una tabla).
+
+Los notebooks permiten el uso de *Markdown*, un lenguaje de marcado (o más simplemente: una convención de escritura) que permite introducir formato usando símbolos. Por ejemplo, para poner una palabra en **negrita** simplemente se la envuelve en 2 asteriscos de cada lado; para ponerla en *cursiva/itálica*, se la envuelve en 1 asterisco de cada lado; para mostrar `código`, se utilizan *backtics* (\`). Acá hay una [viñeta con las marcas más comunes](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf). RStudio soporta markdown y permite exportar el documento en distintos formatos, como HTML, pdf, slides, etc. Generalmente también podés incluir HTML.
+
+Un IDE muy utilizado para trabajar con notebooks es Jupyter. Lo podés utilizar tanto en RStudio local como en posit.cloud.
